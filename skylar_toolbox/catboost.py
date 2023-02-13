@@ -508,7 +508,7 @@ class CustomCatBoostCV:
 
             # Update CatBoost params
             train_dir_sr = os.path.join(self.cat_boost_dt['train_dir'], str(index_it))
-            self.cat_boost_dt.update(train_dir=train_dir_sr)
+            self.models_lt[index_it].cbm.set_params(train_dir=train_dir_sr)
 
             # Fit model
             self.models_lt[index_it].fit(
