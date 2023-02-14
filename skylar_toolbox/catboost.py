@@ -603,8 +603,7 @@ class CustomCatBoostCV:
 
         '''
         for ccb in self.models_lt:
-            for attribute_sr in ['y_train_pred', 'y_valid_pred']:
-                ccb.__delattr__(attribute_sr)
+            ccb.delete_predictions()
         return self
     
     def _compare_eval_metrics(self):
