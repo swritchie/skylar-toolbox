@@ -37,7 +37,7 @@ class CustomCatBoost:
         '''
         required_keys_lt = [
             'loss_function', 'eval_metric', 'custom_metric', 'random_seed', 'iterations', 'verbose',
-            'early_stopping_rounds', 'use_best_model', 'task_type', 'cat_features']
+            'early_stopping_rounds', 'use_best_model', 'task_type', 'cat_features', 'monotone_constraints']
         for key_sr in required_keys_lt:
             assert key_sr in cat_boost_dt.keys(), f'{key_sr} not in cat_boost_dt'
         self.cat_boost_dt = cat_boost_dt
@@ -468,18 +468,13 @@ class CustomCatBoostCV:
         None.
 
         '''
-        required_keys_lt = [
-            'loss_function', 'eval_metric', 'custom_metric', 'random_seed', 'iterations', 'verbose',
-            'early_stopping_rounds', 'use_best_model', 'task_type', 'cat_features', 'train_dir']
-        for key_sr in required_keys_lt:
-            assert key_sr in cat_boost_dt.keys(), f'{key_sr} not in cat_boost_dt'
         self.cat_boost_dt = cat_boost_dt
+        self.binary_bl = binary_bl
         assert 'n_splits' in sklearn_splitter.__dict__.keys()
+        self.sklearn_splitter = sklearn_splitter
         self.models_lt = [
             CustomCatBoost(cat_boost_dt=cat_boost_dt, binary_bl=binary_bl) 
             for _ in range(sklearn_splitter.__getattribute__('n_splits'))]
-        self.binary_bl = binary_bl
-        self.sklearn_splitter = sklearn_splitter
         
     def fit(
             self, 
