@@ -503,7 +503,7 @@ class CustomCatBoostCV:
             print('Shapes:\n- {}'.format('\n- '.join(str(tmp.shape) for tmp in [train_ay, test_ay])))
 
             # Update CatBoost params
-            train_dir_sr = os.path.join(self.cat_boost_dt['train_dir'], str(index_it))
+            train_dir_sr = '{}/{:03d}'.format(self.cat_boost_dt['train_dir'], index_it)
             self.models_lt[index_it].cbm.set_params(train_dir=train_dir_sr)
 
             # Fit model
