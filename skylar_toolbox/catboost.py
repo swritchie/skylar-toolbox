@@ -523,6 +523,35 @@ class CustomCatBoostCV:
         self.pvc_feature_importances_df = self._compare_feature_importances(type_sr='PredictionValuesChange')
         return self
     
+    def sum_models(
+            self, 
+            strategy_sr: str):
+        '''
+        Ensembles models trained on different subsets
+
+        Parameters
+        ----------
+        strategy_sr : str
+            One of ['best', 'equal'], signifying when models should be weighted...
+            - In proportion to their validation scores
+            - Equally.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        models_lt = [ccb.cbm for ccb in self.models_lt]
+        if strategy_sr == 'best':
+            weights_lt = self.eval_metrics_df.filter(regex='validation_\d').loc[self.cat_boost_dt['eval_metric'], :].tolist()
+            self.cbm = cb.sum_models(models=models_lt, weights=weights_lt)
+        elif strategy_sr == 'equal':
+            self.cbm = cb.sum_models(models=models_lt)
+        else:
+            assert False, f'{strategy_sr} not in ["best", "equal"]'
+        return self
+    
     def plot_eval_metrics(self):
         '''
         Plots eval metrics with standard errors
@@ -813,6 +842,34 @@ class FeatureSelector:
             self.ranks_df['cnt_features_rank'] * weights_dt['cnt_features'])
         return self
     
+    def get_best_features(self):
+        '''
+        Gets features from best model according to rank (including weighted if it exists)
+
+        Returns
+        -------
+        best_features_ix : pd.Index
+            Features from best model.
+
+        '''
+        best_iteration_it = self._get_best_iteration()
+        best_features_ix = self.results_df.loc[best_iteration_it, 'features']
+        return best_features_ix
+    
+    def get_best_model(self):
+        '''
+        Gets best model according to rank (including weighted if it exists)
+
+        Returns
+        -------
+        best_ccbcv : CustomCatBoostCV
+            Best model.
+
+        '''
+        best_iteration_it = self._get_best_iteration()
+        best_ccbcv = self.models_lt[best_iteration_it]
+        return best_ccbcv
+    
     def plot_results(self):
         '''
         Plots results (original scale)
@@ -1049,3 +1106,16 @@ class FeatureSelector:
                 combined = lambda x: x.sum(axis=1))
             .rename(columns=lambda x: f'{x}_rank'))
         return ranks_df
+    
+    def _get_best_iteration(self):
+        '''
+        Gets best iteration according to rank (including weighted if it exists)
+
+        Returns
+        -------
+        best_iteration_it : int
+            Best iteration.
+
+        '''
+        best_iteration_it = self.ranks_df.iloc[:, -1].idxmin()
+        return best_iteration_it
