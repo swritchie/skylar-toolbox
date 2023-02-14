@@ -127,42 +127,6 @@ class CustomCatBoost:
         fig = ax.figure
         return fig
     
-    def plot_predictions(
-            self, 
-            y_train: pd.Series, 
-            y_valid: pd.Series):
-        '''
-        Plots histograms of train and validation targets and predictions with table
-
-        Parameters
-        ----------
-        y_train : pd.Series
-            Train target vector.
-        y_valid : pd.Series
-            Validation target vector.
-
-        Returns
-        -------
-        fig : plt.Figure
-            Figure.
-
-        '''
-        fig, axes = plt.subplots(nrows=2, sharex=True, figsize=(10, 5))
-        for split_sr, ax in zip(['learn', 'validation'], axes.ravel()):
-            y_true = y_train if split_sr == 'learn' else y_valid
-            y_pred = self.y_train_pred if split_sr == 'learn' else self.y_valid_pred
-            data_df = pd.concat(objs=[y_true, y_pred], axis=1).describe().round(decimals=3)
-            plot_dt = dict(kind='hist' if self.binary_bl else 'kde')
-            if self.binary_bl: 
-                plot_dt['bins'] = 30
-            y_true.plot(ax=ax, **plot_dt)
-            y_pred.plot(ax=ax, **plot_dt)
-            ax.legend()
-            ax.set(title=split_sr)
-            pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
-        fig.tight_layout()
-        return fig
-    
     def plot_feature_importances(
             self, 
             importance_type_sr: str, 
@@ -240,6 +204,42 @@ class CustomCatBoost:
         ax.axhline(y=0, c='k', ls=':')
         pd.plotting.table(ax=ax, data=interaction_strengths_ss.describe().round(decimals=3), bbox=[1.25, 0, 0.25, 1])
         fig = ax.figure
+        return fig
+    
+    def plot_predictions(
+            self, 
+            y_train: pd.Series, 
+            y_valid: pd.Series):
+        '''
+        Plots histograms or KDEs of train and validation targets and predictions with table
+
+        Parameters
+        ----------
+        y_train : pd.Series
+            Train target vector.
+        y_valid : pd.Series
+            Validation target vector.
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        fig, axes = plt.subplots(nrows=2, sharex=True, figsize=(10, 5))
+        for split_sr, ax in zip(['learn', 'validation'], axes.ravel()):
+            y_true = y_train if split_sr == 'learn' else y_valid
+            y_pred = self.y_train_pred if split_sr == 'learn' else self.y_valid_pred
+            data_df = pd.concat(objs=[y_true, y_pred], axis=1).describe().round(decimals=3)
+            plot_dt = dict(kind='hist' if self.binary_bl else 'kde')
+            if self.binary_bl: 
+                plot_dt['bins'] = 30
+            y_true.plot(ax=ax, **plot_dt)
+            y_pred.plot(ax=ax, **plot_dt)
+            ax.legend()
+            ax.set(title=split_sr)
+            pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
+        fig.tight_layout()
         return fig
     
     def delete_predictions(self):
