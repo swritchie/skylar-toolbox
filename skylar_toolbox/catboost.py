@@ -523,6 +523,35 @@ class CustomCatBoostCV:
         self.pvc_feature_importances_df = self._compare_feature_importances(type_sr='PredictionValuesChange')
         return self
     
+    def sum_models(
+            self, 
+            strategy_sr: str):
+        '''
+        Ensembles models trained on different subsets
+
+        Parameters
+        ----------
+        strategy_sr : str
+            One of ['best', 'equal'], signifying when models should be weighted...
+            - In proportion to their validation scores
+            - Equally.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        models_lt = [ccb.cbm for ccb in self.models_lt]
+        if strategy_sr == 'best':
+            weights_lt = self.eval_metrics_df.filter(regex='validation_\d').loc[self.cat_boost_dt['eval_metric'], :].tolist()
+            self.cbm = cb.sum_models(models=models_lt, weights=weights_lt)
+        elif strategy_sr == 'equal':
+            self.cbm = cb.sum_models(models=models_lt)
+        else:
+            assert False, f'{strategy_sr} not in ["best", "equal"]'
+        return self
+    
     def plot_eval_metrics(self):
         '''
         Plots eval metrics with standard errors
