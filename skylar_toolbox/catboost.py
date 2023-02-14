@@ -3,6 +3,7 @@
 # =============================================================================
 
 import catboost as cb
+import numpy as np
 import os
 import pandas as pd
 from catboost import utils as cbus
@@ -669,3 +670,388 @@ class CustomCatBoostCV:
         # Sort
         feature_importances_df.sort_values(by='validation_mean', ascending=False, inplace=True)
         return feature_importances_df
+    
+# =============================================================================
+# FeatureSelector
+# =============================================================================
+
+class FeatureSelector:
+    def __init__(
+            self, 
+            cat_boost_dt: dict, 
+            binary_bl: bool, 
+            sklearn_splitter, 
+            objective_sr: str, 
+            strategy_sr: str, 
+            wait_it: int):
+        '''
+        Iteratively removes features
+
+        Parameters
+        ----------
+        cat_boost_dt : dict
+            Parameters passed to cb.CatBoost.
+        binary_bl : bool
+            Flag for binary classification.
+        sklearn_splitter : TYPE
+            Instance of scikit-learn splitter class.
+        objective_sr : str
+            One of ['minimize', 'maximize'].
+        strategy_sr : str
+            One of ['drop_bad', 'drop_worst'] for removing...
+            - Either all features with LFC <= 0
+            - Or worst feature by LFC.
+        wait_it : int
+            Iterations to wait before stopping procedure.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.cat_boost_dt = cat_boost_dt
+        self.binary_bl = binary_bl
+        self.sklearn_splitter = sklearn_splitter
+        assert objective_sr in ['minimize', 'maximize'], f'{objective_sr} not in ["minimize", "maximize"]'
+        self.objective_sr = objective_sr
+        self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
+        self.best_iteration_it = 0
+        assert strategy_sr in ['drop_bad', 'drop_worst'], f'{strategy_sr} not in ["drop_bad", "drop_worst"]'
+        self.strategy_sr = strategy_sr
+        self.wait_it = wait_it
+        
+    def fit(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series):
+        '''
+        Iteratively fits models
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Make directory
+        output_directory_sr = self.cat_boost_dt['train_dir']
+        os.mkdir(path=output_directory_sr)
+        
+        # Initialize
+        iteration_it = 0
+        self.models_lt = []
+        results_lt = []
+        
+        # Loop
+        while True:
+            # Log
+            print('=' * 80)
+            print(f'Iteration: {iteration_it}')
+            
+            # Make subdirectory
+            output_subdirectory_sr = '{}/{:03d}'.format(output_directory_sr, iteration_it)
+            os.mkdir(path=output_subdirectory_sr)
+            
+            # Update params
+            self._update_params(X=X, train_dir_sr=output_subdirectory_sr)
+            
+            # Fit model
+            ccbcv = CustomCatBoostCV(cat_boost_dt=self.cat_boost_dt, binary_bl=self.binary_bl, sklearn_splitter=self.sklearn_splitter)
+            ccbcv.fit(X=X, y=y)
+            self.models_lt.append(ccbcv)
+            
+            # Get score and update bests
+            score_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'validation_mean']
+            self._update_best_score_and_iteration(score_ft=score_ft, iteration_it=iteration_it)
+            
+            # Get features to drop and keep
+            features_ix, drop_ix, keep_ix = self._get_features(X=X, ccbcv=ccbcv)
+            
+            # Get and print result
+            result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, features_ix=features_ix, drop_ix=drop_ix, keep_ix=keep_ix)
+            results_lt.append(result_dt)
+            self._print_result(result_dt=result_dt)
+            
+            # Evaluate whether to continue
+            if ((iteration_it - self.best_iteration_it == self.wait_it) or 
+            (features_ix.shape[0] == 1) or 
+            (drop_ix.empty)):
+                break
+            else:
+                X.drop(columns=drop_ix, inplace=True)
+                iteration_it += 1
+        
+        # Get results
+        self.results_df = self._get_results(results_lt=results_lt)
+        
+        # Get ranks
+        self.ranks_df = self._get_ranks()
+        return self
+
+    def weight_rank(
+            self, 
+            weights_dt: dict):
+        '''
+        Weights score and feature count ranks to arrive at new combined rank
+
+        Parameters
+        ----------
+        weights_dt : dict
+            Dict with...
+            - Keys of 'scores' and 'cnt_features'
+            - Values corresponding to importances (higher = more important).
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        self.ranks_df['weighted_rank'] = (
+            self.ranks_df['scores_rank'] * weights_dt['scores'] +
+            self.ranks_df['cnt_features_rank'] * weights_dt['cnt_features'])
+        return self
+    
+    def plot_results(self):
+        '''
+        Plots results (original scale)
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        fig, axes = plt.subplots(nrows=2, sharex=True)
+        self.results_df.iloc[:, :2].plot(marker='.', subplots=True, ax=axes)
+        for index_it, ax in enumerate(iterable=axes.ravel()):
+            data_ss = self.results_df.iloc[:, index_it].describe().round(decimals=3)
+            pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        fig.tight_layout()
+        return fig
+    
+    def plot_ranks(self):
+        '''
+        Plots ranks (common scale)
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        ax = self.ranks_df.plot(marker='.')
+        for _, column_ss in self.ranks_df.items():
+            ax.scatter(x=column_ss.idxmin(), y=column_ss.min())
+        fig = ax.figure
+        return fig
+    
+    def delete_predictions(self):
+        '''
+        Deletes predictions from all model instances
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        for ccbcv in self.models_lt:
+            ccbcv.delete_predictions()
+        return self
+    
+    def _update_params(
+            self, 
+            X: pd.DataFrame, 
+            train_dir_sr: str):
+        '''
+        Updates parameters passed to CustomCatBoostCV
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        train_dir_sr : str
+            Output directory.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        self.cat_boost_dt['cat_features'] = [
+            feature_sr for feature_sr in self.cat_boost_dt['cat_features'] if feature_sr in X.columns]
+        self.cat_boost_dt['monotone_constraints'] = {
+            feature_sr: direction_it for feature_sr, direction_it in self.cat_boost_dt['monotone_constraints'].items()
+            if feature_sr in X.columns}
+        self.cat_boost_dt['train_dir'] = train_dir_sr
+        return self
+            
+    def _update_best_score_and_iteration(
+            self, 
+            score_ft: float, 
+            iteration_it: int):
+        '''
+        Updates best score and iteration after fitting model
+
+        Parameters
+        ----------
+        score_ft : float
+            Current score on eval metric.
+        iteration_it : int
+            Current iteration.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        if (self.objective_sr == 'minimize') and (score_ft < self.best_score_ft):
+            self.best_score_ft = score_ft
+            self.best_iteration_it = iteration_it
+        elif (self.objective_sr == 'maximize') and (score_ft > self.best_score_ft):
+            self.best_score_ft = score_ft
+            self.best_iteration_it = iteration_it
+        return self
+    
+    def _get_features(
+            self, 
+            X: pd.DataFrame, 
+            ccbcv: CustomCatBoostCV):
+        '''
+        Gets features used in model and those to be dropped and kept based on it
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        ccbcv : CustomCatBoostCV
+            CV model object.
+
+        Returns
+        -------
+        features_ix : pd.Index
+            Features used.
+        drop_ix : pd.Index
+            Features to drop.
+        keep_ix : pd.Index
+            Features to keep.
+
+        '''
+        features_ix = X.columns
+        if self.strategy_sr == 'drop_bad':
+            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
+        else:
+            drop_ix = pd.Index(data=[ccbcv.lfc_feature_importances_df['validation_mean'].idxmin()])
+        keep_ix = features_ix.difference(other=drop_ix)
+        return features_ix, drop_ix, keep_ix
+    
+    def _get_result(
+            self, 
+            iteration_it: int, 
+            score_ft: float, 
+            features_ix: pd.Index, 
+            drop_ix: pd.Index, 
+            keep_ix: pd.Index):
+        '''
+        Gets current result as dict
+
+        Parameters
+        ----------
+        iteration_it : int
+            Current iteration.
+        score_ft : float
+            Current score on eval metric.
+        features_ix : pd.Index
+            Features used.
+        drop_ix : pd.Index
+            Features to drop.
+        keep_ix : pd.Index
+            Features to keep.
+
+        Returns
+        -------
+        result_dt : dict
+            Current result.
+
+        '''
+        result_dt = {
+            'iterations': iteration_it,
+            'scores': score_ft,
+            'cnt_features': features_ix.shape[0],
+            'cnt_drop': drop_ix.shape[0],
+            'cnt_keep': keep_ix.shape[0],
+            'best_iterations': self.best_iteration_it,
+            'best_scores': self.best_score_ft,
+            'features': features_ix}
+        return result_dt
+    
+    def _print_result(
+            self, 
+            result_dt: dict):
+        '''
+        Prints current result
+
+        Parameters
+        ----------
+        result_dt : dict
+            Current result.
+
+        Returns
+        -------
+        None.
+
+        '''
+        print('Result:')
+        for key_sr in result_dt.keys():
+            if key_sr != 'features':
+                print('- {}: {}'.format(key_sr, result_dt[key_sr]))
+    
+    def _get_results(
+            self, 
+            results_lt: list):
+        '''
+        Gets all results as data frame
+
+        Parameters
+        ----------
+        results_lt : list
+            Results from all iterations.
+
+        Returns
+        -------
+        results_df : pd.DataFrame
+            Results from all iterations.
+
+        '''
+        results_df = pd.DataFrame(data=results_lt).set_index(keys='iterations')
+        return results_df
+    
+    def _get_ranks(self):
+        '''
+        Ranks results based on scores and feature counts
+
+        Returns
+        -------
+        ranks_df : pd.DataFrame
+            Ranked results from all iterations.
+
+        '''
+        ranks_df = (
+            self.results_df
+            .iloc[:, :2]
+            .assign(
+                scores = lambda x: x['scores'].rank(pct=True, ascending=False if self.objective_sr == 'maximize' else True),
+                cnt_features = lambda x: x['cnt_features'].rank(pct=True),
+                combined = lambda x: x.sum(axis=1))
+            .rename(columns=lambda x: f'{x}_rank'))
+        return ranks_df
