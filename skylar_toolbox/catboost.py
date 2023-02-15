@@ -451,13 +451,7 @@ class CustomCatBoostCV:
         '''
         self.cat_boost_dt = cat_boost_dt
         self.binary_bl = binary_bl
-        required_key_sr = 'n_splits'
-        if required_key_sr not in sklearn_splitter.__dict__.keys():
-            raise KeyError(f'Required key "{required_key_sr}" is not in sklearn_splitter.__dict__')
         self.sklearn_splitter = sklearn_splitter
-        self.models_lt = [
-            CustomCatBoost(cat_boost_dt=cat_boost_dt, binary_bl=binary_bl) 
-            for _ in range(sklearn_splitter.__getattribute__('n_splits'))]
         
     def fit(
             self, 
@@ -479,22 +473,34 @@ class CustomCatBoostCV:
             DESCRIPTION.
 
         '''
+        # Make directory
+        output_directory_sr = self.cat_boost_dt['train_dir']
+        os.mkdir(path=output_directory_sr)
+        
+        # Initialize
+        self.models_lt = []
+        
         for index_it, (train_ay, test_ay) in enumerate(iterable=self.sklearn_splitter.split(X=X, y=y)):
             # Log
             print('-' * 80)
             print(f'Split: {index_it}')
             print('Shapes:\n- {}'.format('\n- '.join(str(tmp.shape) for tmp in [train_ay, test_ay])))
-
-            # Update CatBoost params
-            train_dir_sr = '{}/{:03d}'.format(self.cat_boost_dt['train_dir'], index_it)
-            self.models_lt[index_it].cbm.set_params(train_dir=train_dir_sr)
+            
+            # Make subdirectory
+            output_subdirectory_sr = '{}/{:03d}'.format(output_directory_sr, index_it)
+            os.mkdir(path=output_subdirectory_sr)
+            
+            # Update params
+            self.cat_boost_dt['train_dir'] = output_subdirectory_sr
 
             # Fit model
-            self.models_lt[index_it].fit(
+            ccb = CustomCatBoost(cat_boost_dt=self.cat_boost_dt, binary_bl=self.binary_bl)
+            ccb.fit(
                 X_train=X.iloc[train_ay, :],
                 y_train=y.iloc[train_ay], 
                 X_valid=X.iloc[test_ay, :], 
                 y_valid=y.iloc[test_ay])
+            self.models_lt.append(ccb)
         
         # Compare eval metrics
         self.eval_metrics_df = self._compare_eval_metrics()
@@ -987,11 +993,8 @@ class FeatureSelector:
             print('=' * 80)
             print(f'Iteration: {iteration_it}')
             
-            # Make subdirectory
-            output_subdirectory_sr = '{}/{:03d}'.format(output_directory_sr, iteration_it)
-            os.mkdir(path=output_subdirectory_sr)
-            
             # Update params
+            output_subdirectory_sr = '{}/{:03d}'.format(output_directory_sr, iteration_it)
             self._update_params(X=X, train_dir_sr=output_subdirectory_sr)
             
             # Fit model
