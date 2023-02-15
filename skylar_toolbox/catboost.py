@@ -80,16 +80,20 @@ class CustomCatBoost:
         self.y_train_pred = self._get_predictions(X=X_train)
         self.y_valid_pred = self._get_predictions(X=X_valid)
         
+        # Save targets
+        self.y_train = y_train
+        self.y_valid = y_valid
+        
         # Get and compare eval metrics
-        self.eval_metrics_df = self._compare_eval_metrics(y_train=y_train, y_valid=y_valid)
+        self.eval_metrics_df = self._compare_eval_metrics()
         
         # Get and compare LFC feature importances
         self.lfc_feature_importances_df = self._compare_feature_importances(
-            X_train=X_train, y_train=y_train, X_valid=X_valid, y_valid=y_valid, type_sr='LossFunctionChange')
+            X_train=X_train, X_valid=X_valid, type_sr='LossFunctionChange')
         
         # Get and compare PVC feature importances
         self.pvc_feature_importances_df = self._compare_feature_importances(
-            X_train=X_train, y_train=y_train, X_valid=X_valid, y_valid=y_valid, type_sr='PredictionValuesChange')
+            X_train=X_train, X_valid=X_valid, type_sr='PredictionValuesChange')
         
         # Get interaction strengths
         if X_train.shape[1] > 1:
@@ -206,19 +210,9 @@ class CustomCatBoost:
         fig = ax.figure
         return fig
     
-    def plot_predictions(
-            self, 
-            y_train: pd.Series, 
-            y_valid: pd.Series):
+    def plot_predictions(self):
         '''
         Plots histograms or KDEs of train and validation targets and predictions with table
-
-        Parameters
-        ----------
-        y_train : pd.Series
-            Train target vector.
-        y_valid : pd.Series
-            Validation target vector.
 
         Returns
         -------
@@ -228,7 +222,7 @@ class CustomCatBoost:
         '''
         fig, axes = plt.subplots(nrows=2, sharex=True, figsize=(10, 5))
         for split_sr, ax in zip(['learn', 'validation'], axes.ravel()):
-            y_true = y_train if split_sr == 'learn' else y_valid
+            y_true = self.y_train if split_sr == 'learn' else self.y_valid
             y_pred = self.y_train_pred if split_sr == 'learn' else self.y_valid_pred
             data_df = pd.concat(objs=[y_true, y_pred], axis=1).describe().round(decimals=3)
             plot_dt = dict(kind='hist' if self.binary_bl else 'kde')
@@ -242,9 +236,9 @@ class CustomCatBoost:
         fig.tight_layout()
         return fig
     
-    def delete_predictions(self):
+    def delete_predictions_and_targets(self):
         '''
-        Deletes predictions from instance
+        Deletes predictions and targets from instance
 
         Returns
         -------
@@ -252,7 +246,7 @@ class CustomCatBoost:
             DESCRIPTION.
 
         '''
-        for attribute_sr in ['y_train_pred', 'y_valid_pred']:
+        for attribute_sr in ['y_train_pred', 'y_valid_pred', 'y_train', 'y_valid']:
             self.__delattr__(attribute_sr)
         return self
     
@@ -324,19 +318,9 @@ class CustomCatBoost:
             for metric_sr in self.metrics_lt}
         return eval_metrics_dt
     
-    def _compare_eval_metrics(
-            self, 
-            y_train: pd.Series, 
-            y_valid: pd.Series):
+    def _compare_eval_metrics(self):
         '''
         Gets difference in eval metrics for train and validation
-
-        Parameters
-        ----------
-        y_train : pd.Series
-            Train target vector.
-        y_valid : pd.Series
-            Validation target vector.
 
         Returns
         -------
@@ -345,8 +329,8 @@ class CustomCatBoost:
 
         '''
         eval_metrics_dt = {
-            'learn': self._get_eval_metrics(y_true=y_train, y_pred=self.y_train_pred),
-            'validation': self._get_eval_metrics(y_true=y_valid, y_pred=self.y_valid_pred)}
+            'learn': self._get_eval_metrics(y_true=self.y_train, y_pred=self.y_train_pred),
+            'validation': self._get_eval_metrics(y_true=self.y_valid, y_pred=self.y_valid_pred)}
         eval_metrics_df = steda.get_differences(df=pd.DataFrame(data=eval_metrics_dt), columns_lt=list(eval_metrics_dt.keys()))
         return eval_metrics_df
     
@@ -388,9 +372,7 @@ class CustomCatBoost:
     def _compare_feature_importances(
             self, 
             X_train: pd.DataFrame, 
-            y_train: pd.Series, 
             X_valid: pd.DataFrame, 
-            y_valid: pd.Series, 
             type_sr: str):
         '''
         Gets difference in feature importances for train and validation
@@ -399,12 +381,8 @@ class CustomCatBoost:
         ----------
         X_train : pd.DataFrame
             Train feature matrix.
-        y_train : pd.Series
-            Train target vector.
         X_valid : pd.DataFrame
             Validation feature matrix.
-        y_valid : pd.Series
-            Validation target vector.
         type_sr : str
             Feature importance type.
 
@@ -416,7 +394,7 @@ class CustomCatBoost:
         '''
         objs_lt = [
             self._get_feature_importances(X=X, y=y, type_sr=type_sr, name_sr=name_sr)
-            for X, y, name_sr in [(X_train, y_train, 'learn'), (X_valid, y_valid, 'validation')]]
+            for X, y, name_sr in [(X_train, self.y_train, 'learn'), (X_valid, self.y_valid, 'validation')]]
         feature_importances_df = steda.get_differences(
             df=pd.concat(objs=objs_lt, axis=1).sort_values(by='validation', ascending=False),
             columns_lt=['learn', 'validation'])
@@ -621,9 +599,9 @@ class CustomCatBoostCV:
         else:
             assert False, f'{plot_type_sr} not in ["all", "top_bottom"]'
             
-    def delete_predictions(self):
+    def delete_predictions_and_targets(self):
         '''
-        Deletes predictions from all model instances
+        Deletes predictions and targets from all model instances
 
         Returns
         -------
@@ -632,7 +610,7 @@ class CustomCatBoostCV:
 
         '''
         for ccb in self.models_lt:
-            ccb.delete_predictions()
+            ccb.delete_predictions_and_targets()
         return self
     
     def _compare_eval_metrics(self):
@@ -904,9 +882,9 @@ class FeatureSelector:
         fig = ax.figure
         return fig
     
-    def delete_predictions(self):
+    def delete_predictions_and_targets(self):
         '''
-        Deletes predictions from all model instances
+        Deletes predictions and targets from all model instances
 
         Returns
         -------
@@ -915,7 +893,7 @@ class FeatureSelector:
 
         '''
         for ccbcv in self.models_lt:
-            ccbcv.delete_predictions()
+            ccbcv.delete_predictions_and_targets()
         return self
     
     def _update_params(
