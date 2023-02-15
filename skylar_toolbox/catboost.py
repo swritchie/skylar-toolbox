@@ -599,9 +599,9 @@ class CustomCatBoostCV:
         else:
             assert False, f'{plot_type_sr} not in ["all", "top_bottom"]'
             
-    def delete_predictions(self):
+    def delete_predictions_and_targets(self):
         '''
-        Deletes predictions from all model instances
+        Deletes predictions and targets from all model instances
 
         Returns
         -------
@@ -610,7 +610,7 @@ class CustomCatBoostCV:
 
         '''
         for ccb in self.models_lt:
-            ccb.delete_predictions()
+            ccb.delete_predictions_and_targets()
         return self
     
     def _compare_eval_metrics(self):
