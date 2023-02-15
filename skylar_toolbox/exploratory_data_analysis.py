@@ -80,7 +80,12 @@ def get_means(
         df: pd.DataFrame, 
         columns_lt: list):
     '''
-    Gets mean, standard deviation, and 2 * standard error of mean for columns
+    Gets...
+    - mean
+    - standard deviation 
+    - 2 * standard error of mean
+    - lower confidence interval
+    - upper confidence interval
 
     Parameters
     ----------
@@ -97,8 +102,10 @@ def get_means(
     '''
     means_df = df.assign(
         mean = lambda x: x.loc[:, columns_lt].mean(axis=1),
-        std = lambda x: x.loc[:, columns_lt].std(axis=1),
-        se2 = lambda x: 2 * x['std'] / np.sqrt(len(columns_lt)))
+        std = lambda x: x.loc[:, columns_lt].std(axis=1).fillna(value=0),
+        se2 = lambda x: 2 * x['std'] / np.sqrt(len(columns_lt)),
+        lci = lambda x: x['mean'] - x['se2'],
+        uci = lambda x: x['mean'] + x['se2'])
     return means_df
 
 # =============================================================================
