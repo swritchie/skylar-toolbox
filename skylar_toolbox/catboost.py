@@ -882,9 +882,9 @@ class FeatureSelector:
         fig = ax.figure
         return fig
     
-    def delete_predictions(self):
+    def delete_predictions_and_targets(self):
         '''
-        Deletes predictions from all model instances
+        Deletes predictions and targets from all model instances
 
         Returns
         -------
@@ -893,7 +893,7 @@ class FeatureSelector:
 
         '''
         for ccbcv in self.models_lt:
-            ccbcv.delete_predictions()
+            ccbcv.delete_predictions_and_targets()
         return self
     
     def _update_params(
