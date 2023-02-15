@@ -38,8 +38,9 @@ class CustomCatBoost:
         required_keys_lt = [
             'loss_function', 'eval_metric', 'custom_metric', 'random_seed', 'iterations', 'verbose',
             'early_stopping_rounds', 'use_best_model', 'task_type', 'cat_features', 'monotone_constraints']
-        for key_sr in required_keys_lt:
-            assert key_sr in cat_boost_dt.keys(), f'{key_sr} not in cat_boost_dt'
+        for required_key_sr in required_keys_lt:
+            if required_key_sr not in cat_boost_dt.keys():
+                raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
         self.cat_boost_dt = cat_boost_dt
         self.cbm = cb.CatBoost(params=cat_boost_dt)
         self.binary_bl = binary_bl
@@ -155,12 +156,14 @@ class CustomCatBoost:
             Figure.
 
         '''
+        permitted_importance_types_lt = ['LossFunctionChange', 'PredictionValuesChange']
         if importance_type_sr == 'LossFunctionChange':
             feature_importances_df = self.lfc_feature_importances_df
         elif importance_type_sr == 'PredictionValuesChange':
             feature_importances_df = self.pvc_feature_importances_df
         else:
-            assert False, f'{importance_type_sr} not in ["LossFunctionChange", "PredictionValuesChange"]'
+            raise ValueError(f'importance_type_sr must be one of {permitted_importance_types_lt}')
+        implemented_plot_types_lt = ['all', 'top_bottom', 'abs_diff', 'pct_diff']
         if plot_type_sr == 'all':
             ax = feature_importances_df.iloc[:, :2].plot()
             ax.set(xticks=[])
@@ -190,7 +193,7 @@ class CustomCatBoost:
             fig = ax.figure
             return fig
         else:
-            assert False, f'{plot_type_sr} not in ["all", "top_bottom", "abs_diff", "pct_diff"]'
+            raise NotImplementedError(f'plot_type_sr must be one of {implemented_plot_types_lt}')
             
     def plot_interaction_strengths(self):
         '''
@@ -448,7 +451,9 @@ class CustomCatBoostCV:
         '''
         self.cat_boost_dt = cat_boost_dt
         self.binary_bl = binary_bl
-        assert 'n_splits' in sklearn_splitter.__dict__.keys()
+        required_key_sr = 'n_splits'
+        if required_key_sr not in sklearn_splitter.__dict__.keys():
+            raise KeyError(f'Required key "{required_key_sr}" is not in sklearn_splitter.__dict__')
         self.sklearn_splitter = sklearn_splitter
         self.models_lt = [
             CustomCatBoost(cat_boost_dt=cat_boost_dt, binary_bl=binary_bl) 
@@ -521,13 +526,14 @@ class CustomCatBoostCV:
 
         '''
         models_lt = [ccb.cbm for ccb in self.models_lt]
-        if strategy_sr == 'best':
+        implemented_strategies_lt = ['weight_by_score', 'weight_equally']
+        if strategy_sr == 'weight_by_score':
             weights_lt = self.eval_metrics_df.filter(regex='validation_\d').loc[self.cat_boost_dt['eval_metric'], :].tolist()
             self.cbm = cb.sum_models(models=models_lt, weights=weights_lt)
-        elif strategy_sr == 'equal':
+        elif strategy_sr == 'weight_equally':
             self.cbm = cb.sum_models(models=models_lt)
         else:
-            assert False, f'{strategy_sr} not in ["best", "equal"]'
+            raise NotImplementedError(f'strategy_sr must be one of {implemented_strategies_lt}')
         return self
     
     def plot_eval_metrics(self):
@@ -570,15 +576,17 @@ class CustomCatBoostCV:
             Figure.
 
         '''
+        permitted_importance_types_lt = ['LossFunctionChange', 'PredictionValuesChange']
         if importance_type_sr == 'LossFunctionChange':
             feature_importances_df = self.lfc_feature_importances_df
         elif importance_type_sr == 'PredictionValuesChange':
             feature_importances_df = self.pvc_feature_importances_df
         else:
-            assert False, f'{importance_type_sr} not in ["LossFunctionChange", "PredictionValuesChange"]'
+            raise ValueError(f'importance_type_sr must be one of {permitted_importance_types_lt}')
         xs_df = ys_df = feature_importances_df.filter(like='mean').rename(columns=lambda x: x.split('_')[0])
         xerrs_df = yerrs_df = feature_importances_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
         data_df = ys_df.describe().round(decimals=3)
+        implemented_plot_types_lt = ['all', 'top_bottom']
         if plot_type_sr == 'all':
             ax = ys_df.plot(yerr=yerrs_df)
             ax.set(xticks=[])
@@ -597,7 +605,7 @@ class CustomCatBoostCV:
             fig.tight_layout()
             return fig
         else:
-            assert False, f'{plot_type_sr} not in ["all", "top_bottom"]'
+            raise NotImplementedError(f'plot_type_sr must be one of {implemented_plot_types_lt}')
             
     def delete_predictions_and_targets(self):
         '''
@@ -713,11 +721,15 @@ class FeatureSelector:
         self.cat_boost_dt = cat_boost_dt
         self.binary_bl = binary_bl
         self.sklearn_splitter = sklearn_splitter
-        assert objective_sr in ['minimize', 'maximize'], f'{objective_sr} not in ["minimize", "maximize"]'
+        permitted_objectives_lt = ['minimize', 'maximize']
+        if objective_sr not in permitted_objectives_lt:
+            raise ValueError(f'objective_sr must be one of {permitted_objectives_lt}')
         self.objective_sr = objective_sr
         self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
         self.best_iteration_it = 0
-        assert strategy_sr in ['drop_bad', 'drop_worst'], f'{strategy_sr} not in ["drop_bad", "drop_worst"]'
+        implemented_strategies_lt = ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_worst_mean']
+        if strategy_sr not in implemented_strategies_lt:
+            raise NotImplementedError(f'strategy_sr must be one of {implemented_strategies_lt}')
         self.strategy_sr = strategy_sr
         self.wait_it = wait_it
         
