@@ -38,8 +38,9 @@ class CustomCatBoost:
         required_keys_lt = [
             'loss_function', 'eval_metric', 'custom_metric', 'random_seed', 'iterations', 'verbose',
             'early_stopping_rounds', 'use_best_model', 'task_type', 'cat_features', 'monotone_constraints']
-        for key_sr in required_keys_lt:
-            assert key_sr in cat_boost_dt.keys(), f'{key_sr} not in cat_boost_dt'
+        for required_key_sr in required_keys_lt:
+            if required_key_sr not in cat_boost_dt.keys():
+                raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
         self.cat_boost_dt = cat_boost_dt
         self.cbm = cb.CatBoost(params=cat_boost_dt)
         self.binary_bl = binary_bl
@@ -155,12 +156,14 @@ class CustomCatBoost:
             Figure.
 
         '''
+        permitted_importance_types_lt = ['LossFunctionChange', 'PredictionValuesChange']
         if importance_type_sr == 'LossFunctionChange':
             feature_importances_df = self.lfc_feature_importances_df
         elif importance_type_sr == 'PredictionValuesChange':
             feature_importances_df = self.pvc_feature_importances_df
         else:
-            assert False, f'{importance_type_sr} not in ["LossFunctionChange", "PredictionValuesChange"]'
+            raise ValueError(f'importance_type_sr must be one of {permitted_importance_types_lt}')
+        implemented_plot_types_lt = ['all', 'top_bottom', 'abs_diff', 'pct_diff']
         if plot_type_sr == 'all':
             ax = feature_importances_df.iloc[:, :2].plot()
             ax.set(xticks=[])
@@ -190,7 +193,7 @@ class CustomCatBoost:
             fig = ax.figure
             return fig
         else:
-            assert False, f'{plot_type_sr} not in ["all", "top_bottom", "abs_diff", "pct_diff"]'
+            raise NotImplementedError(f'plot_type_sr must be one of {implemented_plot_types_lt}')
             
     def plot_interaction_strengths(self):
         '''
@@ -448,7 +451,9 @@ class CustomCatBoostCV:
         '''
         self.cat_boost_dt = cat_boost_dt
         self.binary_bl = binary_bl
-        assert 'n_splits' in sklearn_splitter.__dict__.keys()
+        required_key_sr = 'n_splits'
+        if required_key_sr not in sklearn_splitter.__dict__.keys():
+            raise KeyError(f'Required key "{required_key_sr}" is not in sklearn_splitter.__dict__')
         self.sklearn_splitter = sklearn_splitter
         self.models_lt = [
             CustomCatBoost(cat_boost_dt=cat_boost_dt, binary_bl=binary_bl) 
@@ -510,9 +515,7 @@ class CustomCatBoostCV:
         Parameters
         ----------
         strategy_sr : str
-            One of ['best', 'equal'], signifying when models should be weighted...
-            - In proportion to their validation scores
-            - Equally.
+            How models should be weighted. Must be one of ['weight_by_score', 'weight_equally']
 
         Returns
         -------
@@ -521,13 +524,14 @@ class CustomCatBoostCV:
 
         '''
         models_lt = [ccb.cbm for ccb in self.models_lt]
-        if strategy_sr == 'best':
+        implemented_strategies_lt = ['weight_by_score', 'weight_equally']
+        if strategy_sr == 'weight_by_score':
             weights_lt = self.eval_metrics_df.filter(regex='validation_\d').loc[self.cat_boost_dt['eval_metric'], :].tolist()
             self.cbm = cb.sum_models(models=models_lt, weights=weights_lt)
-        elif strategy_sr == 'equal':
+        elif strategy_sr == 'weight_equally':
             self.cbm = cb.sum_models(models=models_lt)
         else:
-            assert False, f'{strategy_sr} not in ["best", "equal"]'
+            raise NotImplementedError(f'strategy_sr must be one of {implemented_strategies_lt}')
         return self
     
     def plot_eval_metrics(self):
@@ -570,15 +574,17 @@ class CustomCatBoostCV:
             Figure.
 
         '''
+        permitted_importance_types_lt = ['LossFunctionChange', 'PredictionValuesChange']
         if importance_type_sr == 'LossFunctionChange':
             feature_importances_df = self.lfc_feature_importances_df
         elif importance_type_sr == 'PredictionValuesChange':
             feature_importances_df = self.pvc_feature_importances_df
         else:
-            assert False, f'{importance_type_sr} not in ["LossFunctionChange", "PredictionValuesChange"]'
+            raise ValueError(f'importance_type_sr must be one of {permitted_importance_types_lt}')
         xs_df = ys_df = feature_importances_df.filter(like='mean').rename(columns=lambda x: x.split('_')[0])
         xerrs_df = yerrs_df = feature_importances_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
         data_df = ys_df.describe().round(decimals=3)
+        implemented_plot_types_lt = ['all', 'top_bottom']
         if plot_type_sr == 'all':
             ax = ys_df.plot(yerr=yerrs_df)
             ax.set(xticks=[])
@@ -597,7 +603,7 @@ class CustomCatBoostCV:
             fig.tight_layout()
             return fig
         else:
-            assert False, f'{plot_type_sr} not in ["all", "top_bottom"]'
+            raise NotImplementedError(f'plot_type_sr must be one of {implemented_plot_types_lt}')
             
     def delete_predictions_and_targets(self):
         '''
@@ -673,6 +679,226 @@ class CustomCatBoostCV:
         return feature_importances_df
     
 # =============================================================================
+# ExampleInspector
+# =============================================================================
+    
+class ExampleInspector:
+    def __init__(
+            self, 
+            ccbcv: CustomCatBoostCV, 
+            losses_nlargest_n_it: int):
+        '''
+        Gets losses and importances (of train on valid) per example
+
+        Parameters
+        ----------
+        ccbcv : CustomCatBoostCV
+            CV model.
+        losses_nlargest_n_it : int
+            Number of validation examples used to get train example importances. 
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.ccbcv = ccbcv
+        self.losses_nlargest_n_it = losses_nlargest_n_it
+    
+    def fit(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series):
+        '''
+        Gets losses and example importances
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        losses_lt, example_importances_lt = [], []
+        
+        for index_it, ccb in enumerate(iterable=self.ccbcv.models_lt):
+            # Log
+            print('-' * 80)
+            print(f'Split: {index_it}')
+            
+            # Get losses
+            losses_ss = self._get_losses(ccb=ccb)
+            losses_lt.append(losses_ss)
+            
+            # Get largest
+            largest_losses_ss = losses_ss.nlargest(n=self.losses_nlargest_n_it)
+            
+            # Get example importances
+            example_importances_ss = self._get_example_importances(largest_losses_ss=largest_losses_ss, ccb=ccb, X=X, y=y)
+            example_importances_lt.append(example_importances_ss)
+            
+        # Combine losses
+        self.losses_ss = pd.concat(objs=losses_lt).sort_values(ascending=False)
+        
+        # Compare example importances
+        self.example_importances_df = self._compare_example_importances(example_importances_lt=example_importances_lt)
+        return self
+    
+    def plot_losses(self):
+        '''
+        Plots histogram of losses (with table)
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        ax = steda.plot_histogram(ss=self.losses_ss)
+        fig = ax.figure
+        return fig
+    
+    def plot_example_importances(self):
+        '''
+        Plots histogram of example importances (with table)
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        ax = steda.plot_histogram(ss=self.example_importances_df['mean'])
+        fig = ax.figure
+        return fig
+    
+    def delete_predictions_and_targets(self):
+        '''
+        Deletes predictions and targets from all model instances
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        for ccb in self.ccbcv.models_lt:
+            ccb.delete_predictions_and_targets()
+        return self
+    
+    def _get_losses(
+            self, 
+            ccb: CustomCatBoost):
+        '''
+        Gets validation losses for models with loss functions of...
+        - Logloss
+        - RMSE
+        - MAE
+
+        Parameters
+        ----------
+        ccb : CustomCatBoost
+            Model.
+
+        Returns
+        -------
+        losses_ss : pd.Series
+            Validation losses.
+
+        '''
+        loss_function_sr = ccb.cat_boost_dt['loss_function']
+        implemented_loss_functions_lt = ['Logloss', 'RMSE', 'MAE']
+        if loss_function_sr == 'Logloss':
+            # Get targets
+            y_valid = pd.get_dummies(data=ccb.y_valid)
+            # Get predictions
+            y_valid_pred = (
+                ccb.y_valid_pred
+                .to_frame(name='_1')
+                .assign(_0 = lambda x: 1 - x['_1'])
+                .rename(columns=lambda x: int(x[-1]))
+                .sort_index(axis=1))
+            # Get losses
+            losses_ss = -(y_valid * np.log(y_valid_pred)).sum(axis=1).rename(index='losses')
+            return losses_ss
+        elif loss_function_sr == 'RMSE':
+            losses_ss = ((ccb.y_train - ccb.y_train_pred)**2).rename(index='losses')
+            return losses_ss
+        elif loss_function_sr == 'MAE':
+            losses_ss = np.abs(ccb.y_train - ccb.y_train_pred).rename(index='losses')
+            return losses_ss
+        else:
+            raise NotImplementedError(f'loss_function_sr must be one of {implemented_loss_functions_lt}')
+    
+    def _get_example_importances(
+            self, 
+            largest_losses_ss: pd.Series, 
+            ccb: CustomCatBoost, 
+            X: pd.DataFrame, 
+            y: pd.Series):
+        '''
+        Gets train example importances for largest validation losses
+
+        Parameters
+        ----------
+        largest_losses_ss : pd.Series
+            Largest validation losses (where "largest" is defined at init).
+        ccb : CustomCatBoost
+            Model.
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+
+        Returns
+        -------
+        example_importances_ss : pd.Series
+            Train example importances.
+
+        '''
+        largest_losses_ix = largest_losses_ss.index
+        train_ix = ccb.y_train.index
+        pool_dt = dict(cat_features=ccb.cat_boost_dt['cat_features'])
+        indices_lt, scores_lt = ccb.cbm.get_object_importance(
+            pool=cb.Pool(data=X.loc[largest_losses_ix, :], label=y.loc[largest_losses_ix], **pool_dt),
+            train_pool=cb.Pool(data=X.loc[train_ix, :], label=y.loc[train_ix], **pool_dt), 
+            verbose=train_ix.shape[0] // 10)
+        example_importances_ss = pd.Series(data=scores_lt, index=train_ix[indices_lt], name='importances')
+        return example_importances_ss
+    
+    def _compare_example_importances(
+            self, 
+            example_importances_lt: list):
+        '''
+        Compare example importances across splits
+
+        Parameters
+        ----------
+        example_importances_lt : list
+            List of example importances.
+
+        Returns
+        -------
+        example_importances_df : pd.DataFrame
+            Data frame of example importances with means, etc.
+
+        '''
+        example_importances_df = pd.concat(objs=[
+            example_importances_ss.rename(index=index_it)
+            for index_it, example_importances_ss in enumerate(iterable=example_importances_lt)
+        ], axis=1)
+        example_importances_df = (
+            steda.get_means(df=example_importances_df, columns_lt=example_importances_df.columns.tolist())
+            .sort_values(by='mean', ascending=False))
+        return example_importances_df
+    
+# =============================================================================
 # FeatureSelector
 # =============================================================================
 
@@ -699,9 +925,10 @@ class FeatureSelector:
         objective_sr : str
             One of ['minimize', 'maximize'].
         strategy_sr : str
-            One of ['drop_bad', 'drop_worst'] for removing...
-            - Either all features with LFC <= 0
-            - Or worst feature by LFC.
+            How features should be dropped. Must be one of ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_worst_mean'] for removing...
+            - Either all features with mean LFC <= 0
+            - Or all features with UCI < 0
+            - Or worst feature by mean LFC.
         wait_it : int
             Iterations to wait before stopping procedure.
 
@@ -713,11 +940,15 @@ class FeatureSelector:
         self.cat_boost_dt = cat_boost_dt
         self.binary_bl = binary_bl
         self.sklearn_splitter = sklearn_splitter
-        assert objective_sr in ['minimize', 'maximize'], f'{objective_sr} not in ["minimize", "maximize"]'
+        permitted_objectives_lt = ['minimize', 'maximize']
+        if objective_sr not in permitted_objectives_lt:
+            raise ValueError(f'objective_sr must be one of {permitted_objectives_lt}')
         self.objective_sr = objective_sr
         self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
         self.best_iteration_it = 0
-        assert strategy_sr in ['drop_bad', 'drop_worst'], f'{strategy_sr} not in ["drop_bad", "drop_worst"]'
+        implemented_strategies_lt = ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_worst_mean']
+        if strategy_sr not in implemented_strategies_lt:
+            raise NotImplementedError(f'strategy_sr must be one of {implemented_strategies_lt}')
         self.strategy_sr = strategy_sr
         self.wait_it = wait_it
         
@@ -977,9 +1208,11 @@ class FeatureSelector:
 
         '''
         features_ix = X.columns
-        if self.strategy_sr == 'drop_bad':
+        if self.strategy_sr == 'drop_mean_at_or_below_zero':
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
-        else:
+        elif self.strategy_sr == 'drop_uci_below_zero':
+            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_uci < 0').index
+        elif self.strategy_sr == 'drop_worst_mean':
             drop_ix = pd.Index(data=[ccbcv.lfc_feature_importances_df['validation_mean'].idxmin()])
         keep_ix = features_ix.difference(other=drop_ix)
         return features_ix, drop_ix, keep_ix
