@@ -515,9 +515,7 @@ class CustomCatBoostCV:
         Parameters
         ----------
         strategy_sr : str
-            One of ['best', 'equal'], signifying when models should be weighted...
-            - In proportion to their validation scores
-            - Equally.
+            How models should be weighted. Must be one of ['weight_by_score', 'weight_equally']
 
         Returns
         -------
@@ -707,9 +705,10 @@ class FeatureSelector:
         objective_sr : str
             One of ['minimize', 'maximize'].
         strategy_sr : str
-            One of ['drop_bad', 'drop_worst'] for removing...
-            - Either all features with LFC <= 0
-            - Or worst feature by LFC.
+            How features should be dropped. Must be one of ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_worst_mean'] for removing...
+            - Either all features with mean LFC <= 0
+            - Or all features with UCI < 0
+            - Or worst feature by mean LFC.
         wait_it : int
             Iterations to wait before stopping procedure.
 
@@ -989,9 +988,11 @@ class FeatureSelector:
 
         '''
         features_ix = X.columns
-        if self.strategy_sr == 'drop_bad':
+        if self.strategy_sr == 'drop_mean_at_or_below_zero':
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
-        else:
+        elif self.strategy_sr == 'drop_uci_below_zero':
+            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_uci < 0').index
+        elif self.strategy_sr == 'drop_worst_mean':
             drop_ix = pd.Index(data=[ccbcv.lfc_feature_importances_df['validation_mean'].idxmin()])
         keep_ix = features_ix.difference(other=drop_ix)
         return features_ix, drop_ix, keep_ix
