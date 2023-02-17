@@ -135,7 +135,8 @@ def plot_histogram(
 
     '''
     ax = ss.hist(bins=hist_bins_it)
-    pd.plotting.table(ax=ax, data=ss.describe().round(decimals=3), bbox=table_bbox_lt)
+    data_ss = ss.describe().round(decimals=3)
+    pd.plotting.table(ax=ax, data=data_ss, bbox=table_bbox_lt)
     return ax
 
 # =============================================================================
