@@ -541,7 +541,7 @@ class CustomCatBoostCV:
             output_subdirectory_sr = '{}/{:03d}'.format(output_directory_sr, index_it)
             os.mkdir(path=output_subdirectory_sr)
             
-            # Update params
+            # Update parameters
             self.cat_boost_dt['train_dir'] = output_subdirectory_sr
 
             # Fit model
@@ -1083,7 +1083,7 @@ class ExampleSelector:
             print('=' * 80)
             print(f'Iteration: {iteration_it}')
 
-            # Update params
+            # Update parameters
             output_subdirectory_sr = '{}/{:03d}'.format(output_directory_sr, iteration_it)
             self._update_params(train_dir_sr=output_subdirectory_sr)
 
@@ -1496,7 +1496,7 @@ class FeatureSelector:
 
         '''
         self.model_type_sr = model_type_sr
-        required_keys_lt = ['train_dir']
+        required_keys_lt = ['cat_features', 'monotone_constraints', 'train_dir']
         for required_key_sr in required_keys_lt:
             if required_key_sr not in cat_boost_dt.keys():
                 raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
@@ -1549,7 +1549,7 @@ class FeatureSelector:
             print('=' * 80)
             print(f'Iteration: {iteration_it}')
             
-            # Update params
+            # Update parameters
             output_subdirectory_sr = '{}/{:03d}'.format(output_directory_sr, iteration_it)
             self._update_params(X=X, train_dir_sr=output_subdirectory_sr)
             
