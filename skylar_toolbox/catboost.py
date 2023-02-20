@@ -21,9 +21,7 @@ class CustomCatBoost:
             model_type_sr: str,
             cat_boost_dt: dict):
         '''
-        Wraps CatBoost model...
-        - Storing metadata
-        - Providing methods for plotting, etc.
+        Wraps cb.CatBoost, storing metadata and providing methods for plotting
 
         Parameters
         ----------
@@ -31,13 +29,13 @@ class CustomCatBoost:
             Model type.
         cat_boost_dt : dict
             Parameters passed to CatBoost.
-            
+
         Raises
         ------
         NotImplementedError
-            Implemented values of model_type_sr are ['classification', 'regression'].
+            Implemented values of model_type_sr are {implemented_model_types_lt}.
         KeyError
-            Required key "{required_key_sr}" is not in cat_boost_dt (e.g., train_dir).
+            Required key "{required_key_sr}" is not in cat_boost_dt.
 
         Returns
         -------
@@ -86,7 +84,7 @@ class CustomCatBoost:
             X_valid: pd.DataFrame, 
             y_valid: pd.Series):
         '''
-        Fits model and collects metadata
+        Fits model and stores metadata
 
         Parameters
         ----------
@@ -137,7 +135,7 @@ class CustomCatBoost:
     
     def plot_evals_result(self):
         '''
-        Plots learning curve of eval metrics v. iterations
+        Plots evals result per iteration
 
         Returns
         -------
@@ -153,7 +151,7 @@ class CustomCatBoost:
     
     def plot_eval_metrics(self):
         '''
-        Plots train and validation eval metrics as bars along with table
+        Plots bars of eval metrics on train and validation with table
 
         Returns
         -------
@@ -174,18 +172,21 @@ class CustomCatBoost:
             importance_type_sr: str, 
             plot_type_sr: str):
         '''
-        Plots train and validation feature importances (either 'LossFunctionChange' or 'PredictionValuesChange'):
-            - 'all': line with all importances and table with description
-            - 'top_bottom': horizontal bar with top and bottom features
-            - 'abs_diff': horizontal bar of features with largest difference in train and validation importances
-            - 'pct_diff': horizontal bar of features with largest percent difference in train and validation importances
+        Plots feature importances
 
         Parameters
         ----------
         importance_type_sr : str
-            Type of feature importance. Must be one of ['LossFunctionChange', 'PredictionValuesChange']
+            Importance type.
         plot_type_sr : str
-            Type of plot. Must be one of ['all', 'top_bottom', 'abs_diff', 'pct_diff'].
+            Plot type.
+
+        Raises
+        ------
+        ValueError
+            Permitted values of importance_type_sr are {permitted_importance_types_lt}.
+        NotImplementedError
+            Implemented values of plot_type_sr are {implemented_plot_types_lt}.
 
         Returns
         -------
@@ -255,7 +256,7 @@ class CustomCatBoost:
     
     def plot_predictions(self):
         '''
-        Plots histograms or KDEs of train and validation targets and predictions with table
+        Plots predictions as histogram (classification) or KDE (regression)
 
         Returns
         -------
@@ -281,7 +282,7 @@ class CustomCatBoost:
     
     def delete_predictions_and_targets(self):
         '''
-        Deletes predictions and targets from instance
+        Deletes predictions and targets
 
         Returns
         -------
@@ -295,12 +296,12 @@ class CustomCatBoost:
     
     def _get_evals_result(self):
         '''
-        Gets evals result data frame
+        Gets evals result as data frame
 
         Returns
         -------
         evals_result_df : pd.DataFrame
-            DESCRIPTION.
+            Evals result.
 
         '''
         evals_result_df = pd.DataFrame(data={
@@ -313,7 +314,7 @@ class CustomCatBoost:
             self, 
             X: pd.DataFrame):
         '''
-        Gets predictions as series
+        Gets predictions
 
         Parameters
         ----------
@@ -364,7 +365,7 @@ class CustomCatBoost:
     
     def _compare_eval_metrics(self):
         '''
-        Gets difference in eval metrics for train and validation
+        Compares train and validation eval metrics
 
         Returns
         -------
@@ -394,7 +395,7 @@ class CustomCatBoost:
         y : pd.Series
             Target vector.
         type_sr : str
-            Feature importance type.
+            Importance type.
         name_sr : str
             Split name.
 
@@ -419,7 +420,7 @@ class CustomCatBoost:
             X_valid: pd.DataFrame, 
             type_sr: str):
         '''
-        Gets difference in feature importances for train and validation
+        Compares train and validation feature importances
 
         Parameters
         ----------
@@ -428,7 +429,7 @@ class CustomCatBoost:
         X_valid : pd.DataFrame
             Validation feature matrix.
         type_sr : str
-            Feature importance type.
+            Importance type.
 
         Returns
         -------
@@ -474,16 +475,21 @@ class CustomCatBoostCV:
             cat_boost_dt: dict, 
             sklearn_splitter):
         '''
-        Cross-validates wrapped model and provides additional model inspection tools
+        Cross-validates wrapped model
 
         Parameters
         ----------
+        model_type_sr : str
+            Model type.
         cat_boost_dt : dict
-            Parameters passed to cb.CatBoost.
-        binary_bl : bool
-            Flag for binary classification.
+            Parameters passed to CatBoost.
         sklearn_splitter : TYPE
-            Instance of scikit-learn splitter class.
+            Splitter from scikit-learn.
+
+        Raises
+        ------
+        KeyError
+            Required key "{required_key_sr}" is not in cat_boost_dt.
 
         Returns
         -------
@@ -503,7 +509,7 @@ class CustomCatBoostCV:
             X: pd.DataFrame, 
             y: pd.Series):
         '''
-        Fits model and collects metadata
+        Fits model and stores metadata
 
         Parameters
         ----------
@@ -561,12 +567,17 @@ class CustomCatBoostCV:
             self, 
             strategy_sr: str):
         '''
-        Ensembles models trained on different subsets
+        Ensembles models trained on different subsets of data
 
         Parameters
         ----------
         strategy_sr : str
-            How models should be weighted. Must be one of ['weight_by_score', 'weight_equally']
+            Strategy for weighting models in ensemble.
+
+        Raises
+        ------
+        NotImplementedError
+            Implemented values of strategy_sr are {implemented_strategies_lt}.
 
         Returns
         -------
@@ -587,7 +598,7 @@ class CustomCatBoostCV:
     
     def plot_eval_metrics(self):
         '''
-        Plots eval metrics with standard errors
+        Plots eval metrics with error bars
 
         Returns
         -------
@@ -610,14 +621,21 @@ class CustomCatBoostCV:
             importance_type_sr: str, 
             plot_type_sr: str):
         '''
-        Plots feature importances with standard errors
+        Plots feature importances with error bars
 
         Parameters
         ----------
         importance_type_sr : str
-            Type of feature importance. Must be one of ['LossFunctionChange', 'PredictionValuesChange']
+            Importance type.
         plot_type_sr : str
-            Type of plot. Must be one of ['all', 'top_bottom'].
+            Plot type.
+
+        Raises
+        ------
+        ValueError
+            Permitted values of importance_type_sr are {permitted_importance_types_lt}.
+        NotImplementedError
+            Implemented values of plot_type_sr are {implemented_plot_types_lt}.
 
         Returns
         -------
@@ -635,7 +653,7 @@ class CustomCatBoostCV:
         xs_df = ys_df = feature_importances_df.filter(like='mean').rename(columns=lambda x: x.split('_')[0])
         xerrs_df = yerrs_df = feature_importances_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
         data_df = ys_df.describe().round(decimals=3)
-        implemented_plot_types_lt = ['all', 'top_bottom']
+        implemented_plot_types_lt = ['all', 'top_bottom', 'abs_diff', 'pct_diff']
         if plot_type_sr == 'all':
             ax = ys_df.plot(yerr=yerrs_df)
             ax.set(xticks=[])
@@ -646,8 +664,8 @@ class CustomCatBoostCV:
             fig, axes = plt.subplots(nrows=2, sharex=True)
             for index_it, split_sr in enumerate(iterable=['learn', 'validation']):
                 concat_df = pd.concat(objs=[
-                    xs_df.iloc[:, index_it].nsmallest(),
-                    xs_df.iloc[:, index_it].nlargest()[::-1]])
+                    xs_df[split_sr].nsmallest(),
+                    xs_df[split_sr].nlargest()[::-1]])
                 concat_df.plot(kind='barh', xerr=xerrs_df.loc[concat_df.index, :], ax=axes[index_it])
                 axes[index_it].axvline(x=0, c='k', ls=':')
                 axes[index_it].set(title=split_sr)
@@ -669,7 +687,7 @@ class CustomCatBoostCV:
             
     def delete_predictions_and_targets(self):
         '''
-        Deletes predictions and targets from all model instances
+        Deletes predictions and targets
 
         Returns
         -------
@@ -683,7 +701,7 @@ class CustomCatBoostCV:
     
     def _compare_eval_metrics(self):
         '''
-        Gets mean and standard error for eval metrics
+        Compares train and validation eval metrics
 
         Returns
         -------
@@ -701,18 +719,20 @@ class CustomCatBoostCV:
             eval_metrics_df = (
                 steda.get_means(df=eval_metrics_df, columns_lt=eval_metrics_df.filter(like=split_sr).columns.tolist())
                 .rename(columns=lambda x: f'{split_sr}_{x}' if '_' not in x else x))
+        # Get differences
+        eval_metrics_df = steda.get_differences(df=eval_metrics_df, columns_lt=['learn_mean', 'validation_mean'])
         return eval_metrics_df
     
     def _compare_feature_importances(
             self, 
             type_sr: str):
         '''
-        Gets mean and standard error for feature importances
+        Compares train and validation feature importances
 
         Parameters
         ----------
         type_sr : str
-            Type of feature importance. Must be one of ['LossFunctionChange', 'PredictionValuesChange']
+            Importance type.
 
         Returns
         -------
@@ -752,14 +772,14 @@ class ExampleInspector:
             ccbcv: CustomCatBoostCV, 
             losses_nlargest_n_it: int):
         '''
-        Gets losses and importances (of train on valid) per example
+        Gets losses and importances (of train on validation) per example
 
         Parameters
         ----------
         ccbcv : CustomCatBoostCV
-            CV model.
+            Cross-validated model.
         losses_nlargest_n_it : int
-            Number of validation examples used to get train example importances. 
+            Number of validation examples to use for train example importances.
 
         Returns
         -------
@@ -816,7 +836,7 @@ class ExampleInspector:
     
     def plot_losses(self):
         '''
-        Plots histogram of losses (with table)
+        Plots histogram of losses
 
         Returns
         -------
@@ -830,7 +850,7 @@ class ExampleInspector:
     
     def plot_example_importances(self):
         '''
-        Plots histogram of example importances (with table)
+        Plots histogram of example importances
 
         Returns
         -------
@@ -844,7 +864,7 @@ class ExampleInspector:
     
     def delete_predictions_and_targets(self):
         '''
-        Deletes predictions and targets from all model instances
+        Deletes predictions and targets
 
         Returns
         -------
@@ -860,20 +880,22 @@ class ExampleInspector:
             self, 
             ccb: CustomCatBoost):
         '''
-        Gets validation losses for models with loss functions of...
-        - Logloss
-        - RMSE
-        - MAE
+        Gets losses for all examples
 
         Parameters
         ----------
         ccb : CustomCatBoost
             Model.
 
+        Raises
+        ------
+        NotImplementedError
+            Implemented values of loss_function_sr are {implemented_loss_functions_lt}.
+
         Returns
         -------
         losses_ss : pd.Series
-            Validation losses.
+            Losses.
 
         '''
         loss_function_sr = ccb.cat_boost_dt['loss_function']
@@ -907,12 +929,12 @@ class ExampleInspector:
             X: pd.DataFrame, 
             y: pd.Series):
         '''
-        Gets train example importances for largest validation losses
+        Gets example importances
 
         Parameters
         ----------
         largest_losses_ss : pd.Series
-            Largest validation losses (where "largest" is defined at init).
+            Largest validation losses.
         ccb : CustomCatBoost
             Model.
         X : pd.DataFrame
@@ -923,7 +945,7 @@ class ExampleInspector:
         Returns
         -------
         example_importances_ss : pd.Series
-            Train example importances.
+            Example importances.
 
         '''
         largest_losses_ix = largest_losses_ss.index
@@ -940,17 +962,17 @@ class ExampleInspector:
             self, 
             example_importances_lt: list):
         '''
-        Compare example importances across splits
+        Compares example importances across subsets of data
 
         Parameters
         ----------
         example_importances_lt : list
-            List of example importances.
+            Example importances per split.
 
         Returns
         -------
         example_importances_df : pd.DataFrame
-            Data frame of example importances with means, etc.
+            Example importances.
 
         '''
         example_importances_df = pd.concat(objs=[
@@ -977,29 +999,31 @@ class ExampleSelector:
             example_importances_nlargest_n_it: int,
             wait_it: int):
         '''
-        Iteratively removes examples
+        Selects examples by iteratively removing those with highest validation losses
 
         Parameters
         ----------
+        model_type_sr : str
+            Model type.
         cat_boost_dt : dict
             Parameters passed to CatBoost.
-        binary_bl : bool
-            Flag for binary classification.
         sklearn_splitter : TYPE
-            Instance of scikit-learn splitter class.
+            Splitter from scikit-learn.
         objective_sr : str
-            One of ['minimize', 'maximize'].
+            Objective for eval metric.
         losses_nlargest_n_it : int
-            Number of validation examples with largest losses (on which to calculate importances).
+            Number of validation examples to use for train example importances.
         example_importances_nlargest_n_it : int
-            Number of examples to drop per iteration.
+            Number of train examples to drop.
         wait_it : int
-            Iterations to wait before stopping procedure.
+            Number of iterations to wait before terminating procedure.
 
         Raises
         ------
+        KeyError
+            Required key "{required_key_sr}" is not in cat_boost_dt.
         ValueError
-            objective_sr must be one of ['minimize', 'maximize'].
+            Permitted values of objective_sr are {permitted_objectives_lt}.
 
         Returns
         -------
@@ -1024,11 +1048,11 @@ class ExampleSelector:
         self.wait_it = wait_it
 
     def fit(
-                self,
+            self,
             X: pd.DataFrame,
             y: pd.Series):
         '''
-        Iteratively fits models
+        Fits models, stores metadata, and drops examples
 
         Parameters
         ----------
@@ -1107,14 +1131,17 @@ class ExampleSelector:
             self,
             weights_dt: dict):
         '''
-        Weights score and example count ranks to arrive at new combined rank
+        Creates new combined rank by weighting components
 
         Parameters
         ----------
         weights_dt : dict
-            Dict with...
-            - Keys of 'scores' and 'cnt_examples'
-            - Values corresponding to importances (higher = more important).
+            Weights.
+
+        Raises
+        ------
+        KeyError
+            Required key "{required_key_sr}" is not in weights_dt.
 
         Returns
         -------
@@ -1134,12 +1161,12 @@ class ExampleSelector:
 
     def get_best_examples(self):
         '''
-        Gets examples from best model according to rank (including weighted if it exists)
+        Gets examples from best iteration
 
         Returns
         -------
         best_examples_ix : pd.Index
-            Examples from best model.
+            Best examples.
 
         '''
         best_iteration_it = self._get_best_iteration()
@@ -1148,12 +1175,12 @@ class ExampleSelector:
 
     def get_best_model(self):
         '''
-        Gets best model according to rank (including weighted if it exists)
+        Gets model from best iteration
 
         Returns
         -------
-        best_ccbcv : CustomCatBoostCV
-            Best model.
+        best_ccbcv : CatBoostCV
+            Best cross-validated model.
 
         '''
         best_iteration_it = self._get_best_iteration()
@@ -1162,7 +1189,7 @@ class ExampleSelector:
 
     def get_best_inspector(self):
         '''
-        Gets best inspector according to rank (including weighted if it exists)
+        Gets inspector from best iteration
 
         Returns
         -------
@@ -1176,7 +1203,7 @@ class ExampleSelector:
 
     def plot_results(self):
         '''
-        Plots results (original scale)
+        Plots results
 
         Returns
         -------
@@ -1195,7 +1222,7 @@ class ExampleSelector:
 
     def plot_ranks(self):
         '''
-        Plots ranks (common scale)
+        Plots ranks
 
         Returns
         -------
@@ -1211,7 +1238,7 @@ class ExampleSelector:
 
     def delete_predictions_and_targets(self):
         '''
-        Deletes predictions and targets from all model and inspector instances
+        Deletes predictions and targets
 
         Returns
         -------
@@ -1227,12 +1254,12 @@ class ExampleSelector:
             self,
             train_dir_sr: str):
         '''
-        Updates parameters passed to CustomCatBoostCV
+        Updates parameters
 
         Parameters
         ----------
         train_dir_sr : str
-            Output directory.
+            Train directory.
 
         Returns
         -------
@@ -1248,12 +1275,12 @@ class ExampleSelector:
             score_ft: float,
             iteration_it: int):
         '''
-        Updates best score and iteration after fitting model
+        Updates best score and iteration
 
         Parameters
         ----------
         score_ft : float
-            Current score on eval metric.
+            Current score.
         iteration_it : int
             Current iteration.
 
@@ -1276,19 +1303,19 @@ class ExampleSelector:
             X: pd.DataFrame,
             ei: ExampleInspector):
         '''
-        Gets examples used in model and those to be dropped and kept based on it
+        Gets examples
 
         Parameters
         ----------
         X : pd.DataFrame
             Feature matrix.
         ei : ExampleInspector
-            Example inspector object.
+            Inspector.
 
         Returns
         -------
         examples_ix : pd.Index
-            Examples used.
+            Examples.
         drop_ix : pd.Index
             Examples to drop.
         keep_ix : pd.Index
@@ -1313,16 +1340,18 @@ class ExampleSelector:
             drop_ix: pd.Index,
             keep_ix: pd.Index):
         '''
-        Gets current result as dict
+        Gets result
 
         Parameters
         ----------
         iteration_it : int
             Current iteration.
         score_ft : float
-            Current score on eval metric.
+            Current score.
+        pct_diff_ft : float
+            Current percent difference between train and validation eval metrics.
         examples_ix : pd.Index
-            Examples used.
+            Examples.
         drop_ix : pd.Index
             Examples to drop.
         keep_ix : pd.Index
@@ -1331,7 +1360,7 @@ class ExampleSelector:
         Returns
         -------
         result_dt : dict
-            Current result.
+            Result.
 
         '''
         result_dt = {
@@ -1350,12 +1379,12 @@ class ExampleSelector:
             self,
             result_dt: dict):
         '''
-        Prints current result
+        Prints result
 
         Parameters
         ----------
         result_dt : dict
-            Current result.
+            Result.
 
         Returns
         -------
@@ -1371,17 +1400,17 @@ class ExampleSelector:
             self,
             results_lt: list):
         '''
-        Gets all results as data frame
+        Gets results
 
         Parameters
         ----------
         results_lt : list
-            Results from all iterations.
+            Results.
 
         Returns
         -------
         results_df : pd.DataFrame
-            Results from all iterations.
+            Results.
 
         '''
         results_df = pd.DataFrame(data=results_lt).set_index(keys='iterations')
@@ -1389,12 +1418,12 @@ class ExampleSelector:
 
     def _get_ranks(self):
         '''
-        Ranks results based on scores and example counts
+        Gets ranks
 
         Returns
         -------
         ranks_df : pd.DataFrame
-            Ranked results from all iterations.
+            Ranks.
 
         '''
         ranks_df = (
@@ -1409,7 +1438,7 @@ class ExampleSelector:
 
     def _get_best_iteration(self):
         '''
-        Gets best iteration according to rank (including weighted if it exists)
+        Gets best iteration based on combined or weighted rank
 
         Returns
         -------
@@ -1434,25 +1463,32 @@ class FeatureSelector:
             strategy_sr: str, 
             wait_it: int):
         '''
-        Iteratively removes features
+        Selects features by iteratively removing those with highest validation losses
 
         Parameters
         ----------
+        model_type_sr : str
+            Model type.
         cat_boost_dt : dict
-            Parameters passed to cb.CatBoost.
-        binary_bl : bool
-            Flag for binary classification.
+            Parameters passed to CatBoost.
         sklearn_splitter : TYPE
-            Instance of scikit-learn splitter class.
+            Splitter from scikit-learn.
         objective_sr : str
-            One of ['minimize', 'maximize'].
+            Objective for eval metric.
         strategy_sr : str
-            How features should be dropped. Must be one of ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_lowest_mean'] for removing...
-            - Either all features with mean LFC <= 0
-            - Or all features with UCI < 0
-            - Or lowest feature by mean LFC.
+            Strategy for dropping features.
         wait_it : int
-            Iterations to wait before stopping procedure.
+            Number of iterations to wait before terminating procedure.
+
+
+        Raises
+        ------
+        KeyError
+            Required key "{required_key_sr}" is not in cat_boost_dt.
+        ValueError
+            Permitted values of objective_sr are {permitted_objectives_lt}.
+        NotImplementedError
+            Implemented values of strategy_sr are {implemented_strategies_lt}.
 
         Returns
         -------
@@ -1483,7 +1519,7 @@ class FeatureSelector:
             X: pd.DataFrame, 
             y: pd.Series):
         '''
-        Iteratively fits models
+        Fits models, stores metadata, and drops features
 
         Parameters
         ----------
@@ -1531,7 +1567,7 @@ class FeatureSelector:
             
             # Get and print result
             pct_diff_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'pct_diff']
-            result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, pct_diff_ft=pct_diff_ft, 
+            result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, pct_diff_ft=pct_diff_ft, features_ix=features_ix, drop_ix=drop_ix, keep_ix=keep_ix)
             results_lt.append(result_dt)
             self._print_result(result_dt=result_dt)
             
@@ -1555,14 +1591,17 @@ class FeatureSelector:
             self, 
             weights_dt: dict):
         '''
-        Weights score and feature count ranks to arrive at new combined rank
+        Creates new combined rank by weighting components
 
         Parameters
         ----------
         weights_dt : dict
-            Dict with...
-            - Keys of 'scores' and 'cnt_features'
-            - Values corresponding to importances (higher = more important).
+            Weights.
+
+        Raises
+        ------
+        KeyError
+            Required key "{required_key_sr}" is not in weights_dt.
 
         Returns
         -------
@@ -1582,12 +1621,12 @@ class FeatureSelector:
     
     def get_best_features(self):
         '''
-        Gets features from best model according to rank (including weighted if it exists)
+        Gets features from best iteration
 
         Returns
         -------
         best_features_ix : pd.Index
-            Features from best model.
+            Best features.
 
         '''
         best_iteration_it = self._get_best_iteration()
@@ -1596,12 +1635,12 @@ class FeatureSelector:
     
     def get_best_model(self):
         '''
-        Gets best model according to rank (including weighted if it exists)
+        Gets model from best iteration
 
         Returns
         -------
         best_ccbcv : CustomCatBoostCV
-            Best model.
+            Best cross-validated model.
 
         '''
         best_iteration_it = self._get_best_iteration()
@@ -1610,7 +1649,7 @@ class FeatureSelector:
     
     def plot_results(self):
         '''
-        Plots results (original scale)
+        Plots results
 
         Returns
         -------
@@ -1629,7 +1668,7 @@ class FeatureSelector:
     
     def plot_ranks(self):
         '''
-        Plots ranks (common scale)
+        Plots ranks
 
         Returns
         -------
@@ -1645,7 +1684,7 @@ class FeatureSelector:
     
     def delete_predictions_and_targets(self):
         '''
-        Deletes predictions and targets from all model instances
+        Deletes predictions and targets
 
         Returns
         -------
@@ -1662,14 +1701,14 @@ class FeatureSelector:
             X: pd.DataFrame, 
             train_dir_sr: str):
         '''
-        Updates parameters passed to CustomCatBoostCV
+        Updates parameters
 
         Parameters
         ----------
         X : pd.DataFrame
             Feature matrix.
         train_dir_sr : str
-            Output directory.
+            Train directory.
 
         Returns
         -------
@@ -1690,12 +1729,12 @@ class FeatureSelector:
             score_ft: float, 
             iteration_it: int):
         '''
-        Updates best score and iteration after fitting model
+        Updates best score and iteration
 
         Parameters
         ----------
         score_ft : float
-            Current score on eval metric.
+            Current score.
         iteration_it : int
             Current iteration.
 
@@ -1718,23 +1757,23 @@ class FeatureSelector:
             X: pd.DataFrame, 
             ccbcv: CustomCatBoostCV):
         '''
-        Gets features used in model and those to be dropped and kept based on it
+        Gets features
 
         Parameters
         ----------
         X : pd.DataFrame
             Feature matrix.
         ccbcv : CustomCatBoostCV
-            CV model object.
+            Cross-validated model.
 
         Returns
         -------
         features_ix : pd.Index
-            Features used.
+            Features.
         drop_ix : pd.Index
             Features to drop.
         keep_ix : pd.Index
-            Features to keep.
+            Feature to keep.
 
         '''
         features_ix = X.columns
@@ -1756,16 +1795,18 @@ class FeatureSelector:
             drop_ix: pd.Index, 
             keep_ix: pd.Index):
         '''
-        Gets current result as dict
+        Gets result
 
         Parameters
         ----------
         iteration_it : int
             Current iteration.
         score_ft : float
-            Current score on eval metric.
+            Current score.
+        pct_diff_ft : float
+            Current percent difference.
         features_ix : pd.Index
-            Features used.
+            Features.
         drop_ix : pd.Index
             Features to drop.
         keep_ix : pd.Index
@@ -1774,7 +1815,7 @@ class FeatureSelector:
         Returns
         -------
         result_dt : dict
-            Current result.
+            Result.
 
         '''
         result_dt = {
@@ -1793,12 +1834,12 @@ class FeatureSelector:
             self, 
             result_dt: dict):
         '''
-        Prints current result
+        Prints result
 
         Parameters
         ----------
         result_dt : dict
-            Current result.
+            Result.
 
         Returns
         -------
@@ -1814,17 +1855,17 @@ class FeatureSelector:
             self, 
             results_lt: list):
         '''
-        Gets all results as data frame
+        Gets results
 
         Parameters
         ----------
         results_lt : list
-            Results from all iterations.
+            Results.
 
         Returns
         -------
         results_df : pd.DataFrame
-            Results from all iterations.
+            Results.
 
         '''
         results_df = pd.DataFrame(data=results_lt).set_index(keys='iterations')
@@ -1832,12 +1873,12 @@ class FeatureSelector:
     
     def _get_ranks(self):
         '''
-        Ranks results based on scores and feature counts
+        Gets ranks
 
         Returns
         -------
         ranks_df : pd.DataFrame
-            Ranked results from all iterations.
+            Ranks.
 
         '''
         ranks_df = (
@@ -1852,7 +1893,7 @@ class FeatureSelector:
     
     def _get_best_iteration(self):
         '''
-        Gets best iteration according to rank (including weighted if it exists)
+        Gets best iteration
 
         Returns
         -------
