@@ -262,8 +262,8 @@ class CustomCatBoost:
             y_true = self.y_train if split_sr == 'learn' else self.y_valid
             y_pred = self.y_train_pred if split_sr == 'learn' else self.y_valid_pred
             data_df = pd.concat(objs=[y_true, y_pred], axis=1).describe().round(decimals=3)
-            plot_dt = dict(kind='hist' if self.binary_bl else 'kde')
-            if self.binary_bl: 
+            plot_dt = dict(kind='hist' if self.model_type_sr == 'classification' else 'kde')
+            if self.model_type_sr == 'classification': 
                 plot_dt['bins'] = 30
             y_true.plot(ax=ax, **plot_dt)
             y_pred.plot(ax=ax, **plot_dt)
@@ -320,7 +320,7 @@ class CustomCatBoost:
             Predictions.
 
         '''
-        if self.binary_bl:
+        if self.model_type_sr == 'classification':
             predictions_ay = self.cbm.predict(data=X, prediction_type='Probability')[:, 1]
         else:
             predictions_ay = self.cbm.predict(data=X)
@@ -348,7 +348,8 @@ class CustomCatBoost:
 
         '''
         label_ss = y_true
-        approx_ss = y_pred.apply(func=sysl.logit) if self.binary_bl else y_pred
+        approx_ss = y_pred.apply(func=sysl.logit) \
+            if self.model_type_sr == 'classification' else y_pred
         self.metrics_lt = self.cat_boost_dt['custom_metric']
         eval_metrics_dt = {
             metric_sr: cbus.eval_metric(label=label_ss.values, approx=approx_ss.values, metric=metric_sr)[0] 
@@ -463,8 +464,8 @@ class CustomCatBoost:
 class CustomCatBoostCV:
     def __init__(
             self, 
+            model_type_sr: str,
             cat_boost_dt: dict, 
-            binary_bl: bool, 
             sklearn_splitter):
         '''
         Cross-validates wrapped model and provides additional model inspection tools
@@ -483,8 +484,12 @@ class CustomCatBoostCV:
         None.
 
         '''
+        self.model_type_sr = model_type_sr
+        required_keys_lt = ['train_dir']
+        for required_key_sr in required_keys_lt:
+            if required_key_sr not in cat_boost_dt.keys():
+                raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
         self.cat_boost_dt = cat_boost_dt
-        self.binary_bl = binary_bl
         self.sklearn_splitter = sklearn_splitter
         
     def fit(
@@ -528,7 +533,7 @@ class CustomCatBoostCV:
             self.cat_boost_dt['train_dir'] = output_subdirectory_sr
 
             # Fit model
-            ccb = CustomCatBoost(cat_boost_dt=self.cat_boost_dt, binary_bl=self.binary_bl)
+            ccb = CustomCatBoost(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt)
             ccb.fit(
                 X_train=X.iloc[train_ay, :],
                 y_train=y.iloc[train_ay], 
@@ -945,8 +950,8 @@ class ExampleInspector:
 class ExampleSelector:
     def __init__(
             self,
+            model_type_sr: str,
             cat_boost_dt: dict,
-            binary_bl: bool,
             sklearn_splitter,
             objective_sr: str,
             losses_nlargest_n_it: int,
@@ -982,12 +987,16 @@ class ExampleSelector:
         None.
 
         '''
+        self.model_type_sr = model_type_sr
+        required_keys_lt = ['train_dir']
+        for required_key_sr in required_keys_lt:
+            if required_key_sr not in cat_boost_dt.keys():
+                raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
         self.cat_boost_dt = cat_boost_dt
-        self.binary_bl = binary_bl
         self.sklearn_splitter = sklearn_splitter
         permitted_objectives_lt = ['minimize', 'maximize']
         if objective_sr not in permitted_objectives_lt:
-            raise ValueError(f'objective_sr must be one of {permitted_objectives_lt}')
+            raise ValueError(f'Permitted values of objective_sr are {permitted_objectives_lt}')
         self.objective_sr = objective_sr
         self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
         self.best_iteration_it = 0
@@ -1036,7 +1045,7 @@ class ExampleSelector:
             self._update_params(train_dir_sr=output_subdirectory_sr)
 
             # Fit model
-            ccbcv = CustomCatBoostCV(cat_boost_dt=self.cat_boost_dt, binary_bl=self.binary_bl, sklearn_splitter=self.sklearn_splitter)
+            ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
             ccbcv.fit(X=X, y=y)
             self.models_lt.append(ccbcv)
 
@@ -1093,8 +1102,13 @@ class ExampleSelector:
             DESCRIPTION.
 
         '''
+        required_keys_lt = ['scores', 'pct_diffs', 'cnt_examples']
+        for required_key_sr in required_keys_lt:
+            if required_key_sr not in weights_dt.keys():
+                raise KeyError(f'Required key "{required_key_sr}" is not in weights_dt')
         self.ranks_df['weighted_rank'] = (
             self.ranks_df['scores_rank'] * weights_dt['scores'] +
+            self.ranks_df['pct_diffs_rank'] * weights_dt['pct_diffs'] +
             self.ranks_df['cnt_examples_rank'] * weights_dt['cnt_examples'])
         return self
 
@@ -1389,9 +1403,9 @@ class ExampleSelector:
 
 class FeatureSelector:
     def __init__(
-            self, 
+            self,
+            model_type_sr: str,
             cat_boost_dt: dict, 
-            binary_bl: bool, 
             sklearn_splitter, 
             objective_sr: str, 
             strategy_sr: str, 
@@ -1422,18 +1436,22 @@ class FeatureSelector:
         None.
 
         '''
+        self.model_type_sr = model_type_sr
+        required_keys_lt = ['train_dir']
+        for required_key_sr in required_keys_lt:
+            if required_key_sr not in cat_boost_dt.keys():
+                raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
         self.cat_boost_dt = cat_boost_dt
-        self.binary_bl = binary_bl
         self.sklearn_splitter = sklearn_splitter
         permitted_objectives_lt = ['minimize', 'maximize']
         if objective_sr not in permitted_objectives_lt:
-            raise ValueError(f'objective_sr must be one of {permitted_objectives_lt}')
+            raise ValueError(f'Permitted values of objective_sr are {permitted_objectives_lt}')
         self.objective_sr = objective_sr
         self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
         self.best_iteration_it = 0
         implemented_strategies_lt = ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_lowest_mean']
         if strategy_sr not in implemented_strategies_lt:
-            raise NotImplementedError(f'strategy_sr must be one of {implemented_strategies_lt}')
+            raise NotImplementedError(f'Implemented values of strategy_sr are {implemented_strategies_lt}')
         self.strategy_sr = strategy_sr
         self.wait_it = wait_it
         
@@ -1477,7 +1495,7 @@ class FeatureSelector:
             self._update_params(X=X, train_dir_sr=output_subdirectory_sr)
             
             # Fit model
-            ccbcv = CustomCatBoostCV(cat_boost_dt=self.cat_boost_dt, binary_bl=self.binary_bl, sklearn_splitter=self.sklearn_splitter)
+            ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
             ccbcv.fit(X=X, y=y)
             self.models_lt.append(ccbcv)
             
@@ -1528,8 +1546,13 @@ class FeatureSelector:
             DESCRIPTION.
 
         '''
+        required_keys_lt = ['scores', 'pct_diffs', 'cnt_features']
+        for required_key_sr in required_keys_lt:
+            if required_key_sr not in weights_dt.keys():
+                raise KeyError(f'Required key "{required_key_sr}" is not in weights_dt')
         self.ranks_df['weighted_rank'] = (
             self.ranks_df['scores_rank'] * weights_dt['scores'] +
+            self.ranks_df['pct_diffs_rank'] * weights_dt['pct_diffs'] +
             self.ranks_df['cnt_features_rank'] * weights_dt['cnt_features'])
         return self
     
