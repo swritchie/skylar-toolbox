@@ -1497,7 +1497,7 @@ class FeatureSelector:
 
         '''
         self.model_type_sr = model_type_sr
-        required_keys_lt = ['train_dir']
+        required_keys_lt = ['train_dir', 'cat_features', 'monotone_constraints']
         for required_key_sr in required_keys_lt:
             if required_key_sr not in cat_boost_dt.keys():
                 raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
