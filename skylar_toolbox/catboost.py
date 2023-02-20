@@ -905,6 +905,451 @@ class ExampleInspector:
         return example_importances_df
     
 # =============================================================================
+# ExampleSelector
+# =============================================================================
+
+class ExampleSelector:
+    def __init__(
+            self,
+            cat_boost_dt: dict,
+            binary_bl: bool,
+            sklearn_splitter,
+            objective_sr: str,
+            losses_nlargest_n_it: int,
+            example_importances_nlargest_n_it: int,
+            wait_it: int):
+        '''
+        Iteratively removes examples
+
+        Parameters
+        ----------
+        cat_boost_dt : dict
+            Parameters passed to CatBoost.
+        binary_bl : bool
+            Flag for binary classification.
+        sklearn_splitter : TYPE
+            Instance of scikit-learn splitter class.
+        objective_sr : str
+            One of ['minimize', 'maximize'].
+        losses_nlargest_n_it : int
+            Number of validation examples with largest losses (on which to calculate importances).
+        example_importances_nlargest_n_it : int
+            Number of examples to drop per iteration.
+        wait_it : int
+            Iterations to wait before stopping procedure.
+
+        Raises
+        ------
+        ValueError
+            objective_sr must be one of ['minimize', 'maximize'].
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.cat_boost_dt = cat_boost_dt
+        self.binary_bl = binary_bl
+        self.sklearn_splitter = sklearn_splitter
+        permitted_objectives_lt = ['minimize', 'maximize']
+        if objective_sr not in permitted_objectives_lt:
+            raise ValueError(f'objective_sr must be one of {permitted_objectives_lt}')
+        self.objective_sr = objective_sr
+        self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
+        self.best_iteration_it = 0
+        self.losses_nlargest_n_it = losses_nlargest_n_it
+        self.example_importances_nlargest_n_it = example_importances_nlargest_n_it
+        self.wait_it = wait_it
+
+    def fit(
+                self,
+            X: pd.DataFrame,
+            y: pd.Series):
+        '''
+        Iteratively fits models
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Make directory
+        output_directory_sr = self.cat_boost_dt['train_dir']
+        os.mkdir(path=output_directory_sr)
+
+        # Initialize
+        iteration_it = 0
+        self.models_lt = []
+        self.inspectors_lt = []
+        results_lt = []
+
+        # Loop
+        while True:
+            # Log
+            print('=' * 80)
+            print(f'Iteration: {iteration_it}')
+
+            # Update params
+            output_subdirectory_sr = '{}/{:03d}'.format(output_directory_sr, iteration_it)
+            self._update_params(train_dir_sr=output_subdirectory_sr)
+
+            # Fit model
+            ccbcv = CustomCatBoostCV(cat_boost_dt=self.cat_boost_dt, binary_bl=self.binary_bl, sklearn_splitter=self.sklearn_splitter)
+            ccbcv.fit(X=X, y=y)
+            self.models_lt.append(ccbcv)
+
+            # Get score and update bests
+            score_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'validation_mean']
+            self._update_best_score_and_iteration(score_ft=score_ft, iteration_it=iteration_it)
+
+            # Fit inspector
+            ei = ExampleInspector(ccbcv=ccbcv, losses_nlargest_n_it=self.losses_nlargest_n_it)
+            ei.fit(X=X, y=y)
+            self.inspectors_lt.append(ei)
+
+            # Get features to drop and keep
+            examples_ix, drop_ix, keep_ix = self._get_examples(X=X, ei=ei)
+
+            # Get and print result
+            result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, examples_ix=examples_ix, drop_ix=drop_ix, keep_ix=keep_ix)
+            results_lt.append(result_dt)
+            self._print_result(result_dt=result_dt)
+
+            # Evaluate whether to continue
+            if ((iteration_it - self.best_iteration_it == self.wait_it) or
+            (examples_ix.shape[0] == 1) or
+            (drop_ix.empty)):
+                break
+            else:
+                X.drop(index=drop_ix, inplace=True)
+                y.drop(index=drop_ix, inplace=True)
+                iteration_it += 1
+
+        # Get results
+        self.results_df = self._get_results(results_lt=results_lt)
+
+        # Get ranks
+        self.ranks_df = self._get_ranks()
+        return self
+
+    def weight_ranks(
+            self,
+            weights_dt: dict):
+        '''
+        Weights score and example count ranks to arrive at new combined rank
+
+        Parameters
+        ----------
+        weights_dt : dict
+            Dict with...
+            - Keys of 'scores' and 'cnt_examples'
+            - Values corresponding to importances (higher = more important).
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        self.ranks_df['weighted_rank'] = (
+            self.ranks_df['scores_rank'] * weights_dt['scores'] +
+            self.ranks_df['cnt_examples_rank'] * weights_dt['cnt_examples'])
+        return self
+
+    def get_best_examples(self):
+        '''
+        Gets examples from best model according to rank (including weighted if it exists)
+
+        Returns
+        -------
+        best_examples_ix : pd.Index
+            Examples from best model.
+
+        '''
+        best_iteration_it = self._get_best_iteration()
+        best_examples_ix = self.results_df.loc[best_iteration_it, 'examples']
+        return best_examples_ix
+
+    def get_best_model(self):
+        '''
+        Gets best model according to rank (including weighted if it exists)
+
+        Returns
+        -------
+        best_ccbcv : CustomCatBoostCV
+            Best model.
+
+        '''
+        best_iteration_it = self._get_best_iteration()
+        best_ccbcv = self.models_lt[best_iteration_it]
+        return best_ccbcv
+
+    def get_best_inspector(self):
+        '''
+        Gets best inspector according to rank (including weighted if it exists)
+
+        Returns
+        -------
+        best_ei : ExampleInspector
+            Best inspector.
+
+        '''
+        best_iteration_it = self._get_best_iteration()
+        best_ei = self.inspectors_lt[best_iteration_it]
+        return best_ei
+
+    def plot_results(self):
+        '''
+        Plots results (original scale)
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        fig, axes = plt.subplots(nrows=2, sharex=True)
+        self.results_df.iloc[:, :2].plot(marker='.', subplots=True, ax=axes)
+        for index_it, ax in enumerate(iterable=axes.ravel()):
+            data_ss = self.results_df.iloc[:, index_it].describe().round(decimals=3)
+            pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        fig.tight_layout()
+        return fig
+
+    def plot_ranks(self):
+        '''
+        Plots ranks (common scale)
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        ax = self.ranks_df.plot(marker='.')
+        for _, column_ss in self.ranks_df.items():
+            ax.scatter(x=column_ss.idxmin(), y=column_ss.min())
+        fig = ax.figure
+        return fig
+
+    def delete_predictions_and_targets(self):
+        '''
+        Deletes predictions and targets from all model and inspector instances
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        for ccbcv in self.models_lt:
+            ccbcv.delete_predictions_and_targets()
+        return self
+
+    def _update_params(
+            self,
+            train_dir_sr: str):
+        '''
+        Updates parameters passed to CustomCatBoostCV
+
+        Parameters
+        ----------
+        train_dir_sr : str
+            Output directory.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        self.cat_boost_dt['train_dir'] = train_dir_sr
+        return self
+
+    def _update_best_score_and_iteration(
+            self,
+            score_ft: float,
+            iteration_it: int):
+        '''
+        Updates best score and iteration after fitting model
+
+        Parameters
+        ----------
+        score_ft : float
+            Current score on eval metric.
+        iteration_it : int
+            Current iteration.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        if (self.objective_sr == 'minimize') and (score_ft < self.best_score_ft):
+            self.best_score_ft = score_ft
+            self.best_iteration_it = iteration_it
+        elif (self.objective_sr == 'maximize') and (score_ft > self.best_score_ft):
+            self.best_score_ft = score_ft
+            self.best_iteration_it = iteration_it
+        return self
+
+    def _get_examples(
+            self,
+            X: pd.DataFrame,
+            ei: ExampleInspector):
+        '''
+        Gets examples used in model and those to be dropped and kept based on it
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        ei : ExampleInspector
+            Example inspector object.
+
+        Returns
+        -------
+        examples_ix : pd.Index
+            Examples used.
+        drop_ix : pd.Index
+            Examples to drop.
+        keep_ix : pd.Index
+            Examples to keep.
+
+        '''
+        examples_ix = X.index
+        drop_ix = (
+            ei.example_importances_df
+            .query(expr='lci > 0')['mean']
+            .nlargest(n=self.example_importances_nlargest_n_it)
+            .index)
+        keep_ix = examples_ix.difference(other=drop_ix)
+        return examples_ix, drop_ix, keep_ix
+
+    def _get_result(
+            self,
+            iteration_it: int,
+            score_ft: float,
+            examples_ix: pd.Index,
+            drop_ix: pd.Index,
+            keep_ix: pd.Index):
+        '''
+        Gets current result as dict
+
+        Parameters
+        ----------
+        iteration_it : int
+            Current iteration.
+        score_ft : float
+            Current score on eval metric.
+        examples_ix : pd.Index
+            Examples used.
+        drop_ix : pd.Index
+            Examples to drop.
+        keep_ix : pd.Index
+            Examples to keep.
+
+        Returns
+        -------
+        result_dt : dict
+            Current result.
+
+        '''
+        result_dt = {
+            'iterations': iteration_it,
+            'scores': score_ft,
+            'cnt_examples': examples_ix.shape[0],
+            'cnt_drop': drop_ix.shape[0],
+            'cnt_keep': keep_ix.shape[0],
+            'best_iterations': self.best_iteration_it,
+            'best_scores': self.best_score_ft,
+            'examples': examples_ix}
+        return result_dt
+
+    def _print_result(
+            self,
+            result_dt: dict):
+        '''
+        Prints current result
+
+        Parameters
+        ----------
+        result_dt : dict
+            Current result.
+
+        Returns
+        -------
+        None.
+
+        '''
+        print('Result:')
+        for key_sr in result_dt.keys():
+            if key_sr != 'examples':
+                print('- {}: {}'.format(key_sr, result_dt[key_sr]))
+
+    def _get_results(
+            self,
+            results_lt: list):
+        '''
+        Gets all results as data frame
+
+        Parameters
+        ----------
+        results_lt : list
+            Results from all iterations.
+
+        Returns
+        -------
+        results_df : pd.DataFrame
+            Results from all iterations.
+
+        '''
+        results_df = pd.DataFrame(data=results_lt).set_index(keys='iterations')
+        return results_df
+
+    def _get_ranks(self):
+        '''
+        Ranks results based on scores and example counts
+
+        Returns
+        -------
+        ranks_df : pd.DataFrame
+            Ranked results from all iterations.
+
+        '''
+        ranks_df = (
+            self.results_df
+            .iloc[:, :2]
+            .assign(
+                scores = lambda x: x['scores'].rank(pct=True, ascending=False if self.objective_sr == 'maximize' else True),
+                cnt_examples = lambda x: x['cnt_examples'].rank(pct=True),
+                combined = lambda x: x.sum(axis=1))
+            .rename(columns=lambda x: f'{x}_rank'))
+        return ranks_df
+
+    def _get_best_iteration(self):
+        '''
+        Gets best iteration according to rank (including weighted if it exists)
+
+        Returns
+        -------
+        best_iteration_it : int
+            Best iteration.
+
+        '''
+        best_iteration_it = self.ranks_df.iloc[:, -1].idxmin()
+        return best_iteration_it
+    
+# =============================================================================
 # FeatureSelector
 # =============================================================================
 
