@@ -161,8 +161,11 @@ class CustomCatBoost:
             Figure.
 
         '''
-        ax = self.eval_metrics_df.iloc[:, :2].plot(kind='bar')
-        pd.plotting.table(ax=ax, data=self.eval_metrics_df.iloc[:, [0, 1, -1]].round(decimals=3), bbox=[1.25, 0, 0.5, 1])
+        columns_lt = ['learn', 'validation', 'pct_diff']
+        plot_df = self.eval_metrics[columns_lt[:-1]]
+        data_df = self.eval_metrics[columns_lt].round(decimals=3)
+        ax = plot_df.plot(kind='bar')
+        pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
         fig = ax.figure
         return fig
     
@@ -199,18 +202,20 @@ class CustomCatBoost:
             raise ValueError(f'importance_type_sr must be one of {permitted_importance_types_lt}')
         implemented_plot_types_lt = ['all', 'top_bottom', 'abs_diff', 'pct_diff']
         if plot_type_sr == 'all':
-            ax = feature_importances_df.iloc[:, :2].plot()
+            plot_df = feature_importances_df[['learn', 'validation']]
+            data_df = plot_df.describe().round(decimals=3)
+            ax = plot_df.plot()
             ax.set(xticks=[])
             ax.axhline(y=0, c='k', ls=':')
-            pd.plotting.table(ax=ax, data=feature_importances_df.iloc[:, :2].describe().round(decimals=3), bbox=[1.25, 0, 0.5, 1])
+            pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
             fig = ax.figure
             return fig
         elif plot_type_sr == 'top_bottom':
             fig, axes = plt.subplots(nrows=2, sharex=True)
             for index_it, split_sr in enumerate(iterable=['learn', 'validation']):
                 pd.concat(objs=[
-                    feature_importances_df.iloc[:, index_it].nsmallest(),
-                    feature_importances_df.iloc[:, index_it].nlargest()[::-1]]).plot(kind='barh', ax=axes[index_it])
+                    feature_importances_df[split_sr].nsmallest(),
+                    feature_importances_df[split_sr].nlargest()[::-1]]).plot(kind='barh', ax=axes[index_it])
                 axes[index_it].axvline(x=0, c='k', ls=':')
                 axes[index_it].set(title=split_sr)
             fig.tight_layout()
@@ -221,7 +226,7 @@ class CustomCatBoost:
             ax = (
                 top_bottom_df
                 .sort_values(by=plot_type_sr, ascending=True if plot_type_sr == 'abs_diff' else False)
-                .iloc[:, :2]
+                .loc[:, ['learn', 'validation']]
                 .plot(kind='barh'))
             ax.axvline(x=0, c='k', ls=':')
             fig = ax.figure
@@ -239,11 +244,12 @@ class CustomCatBoost:
             Figure.
 
         '''
-        interaction_strengths_ss = self.interaction_strengths_df.iloc[:, -1]
+        interaction_strengths_ss = self.interaction_strengths_df['strengths']
+        data_ss = interaction_strengths_ss.describe().round(decimals=3)
         ax = interaction_strengths_ss.plot()
         ax.set(xticks=[])
         ax.axhline(y=0, c='k', ls=':')
-        pd.plotting.table(ax=ax, data=interaction_strengths_ss.describe().round(decimals=3), bbox=[1.25, 0, 0.25, 1])
+        pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig = ax.figure
         return fig
     
@@ -592,7 +598,7 @@ class CustomCatBoostCV:
         # Get data frames
         ys_df = self.eval_metrics_df.filter(like='mean').rename(columns=lambda x: x.split('_')[0])
         yerrs_df = self.eval_metrics_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
-        data_df = self.eval_metrics_df.filter(regex='mean|se2').round(decimals=3)
+        data_df = self.eval_metrics_df[['learn_mean', 'validation_mean', 'pct_diff']].round(decimals=3)
         # Plot
         ax = ys_df.plot(kind='bar', yerr=yerrs_df)
         pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 1, 1])
@@ -676,7 +682,7 @@ class CustomCatBoostCV:
         '''
         # Concatenate them
         eval_metrics_df = pd.concat(objs=[
-            ccb.eval_metrics_df.iloc[:, :2].rename(columns=lambda x: f'{x}_{index_it}')
+            ccb.eval_metrics_df[['learn', 'validation']].rename(columns=lambda x: f'{x}_{index_it}')
             for index_it, ccb in enumerate(iterable=self.models_lt)
         ], axis=1)
         # Get means
@@ -706,12 +712,12 @@ class CustomCatBoostCV:
         # Concatenate them
         if type_sr == 'LossFunctionChange':
             feature_importances_df = pd.concat(objs=[
-                ccb.lfc_feature_importances_df.iloc[:, :2].rename(columns=lambda x: f'{x}_{index_it}')
+                ccb.lfc_feature_importances_df[['learn', 'validation']].rename(columns=lambda x: f'{x}_{index_it}')
                 for index_it, ccb in enumerate(iterable=self.models_lt)
             ], axis=1)
         elif type_sr == 'PredictionValuesChange':
             feature_importances_df = pd.concat(objs=[
-                ccb.pvc_feature_importances_df.iloc[:, :2].rename(columns=lambda x: f'{x}_{index_it}')
+                ccb.pvc_feature_importances_df[['learn', 'validation']].rename(columns=lambda x: f'{x}_{index_it}')
                 for index_it, ccb in enumerate(iterable=self.models_lt)
             ], axis=1)
         # Get means
@@ -1165,10 +1171,11 @@ class ExampleSelector:
 
         '''
         fig, axes = plt.subplots(nrows=2, sharex=True)
-        self.results_df.iloc[:, :2].plot(marker='.', subplots=True, ax=axes)
-        for index_it, ax in enumerate(iterable=axes.ravel()):
-            data_ss = self.results_df.iloc[:, index_it].describe().round(decimals=3)
-            pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        columns_lt = ['scores', 'pct_diffs', 'cnt_examples']
+        self.results_df[columns_lt].plot(marker='.', subplots=True, ax=axes)
+        for index_it, column_sr in enumerate(iterable=columns_lt):
+            data_ss = self.results_df[column_sr].describe().round(decimals=3)
+            pd.plotting.table(ax=axes[index_it], data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig.tight_layout()
         return fig
 
@@ -1595,10 +1602,11 @@ class FeatureSelector:
 
         '''
         fig, axes = plt.subplots(nrows=2, sharex=True)
-        self.results_df.iloc[:, :2].plot(marker='.', subplots=True, ax=axes)
-        for index_it, ax in enumerate(iterable=axes.ravel()):
-            data_ss = self.results_df.iloc[:, index_it].describe().round(decimals=3)
-            pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        columns_lt = ['scores', 'pct_diffs', 'cnt_features']
+        self.results_df[columns_lt].plot(marker='.', subplots=True, ax=axes)
+        for index_it, column_sr in enumerate(iterable=columns_lt):
+            data_ss = self.results_df[column_sr].describe().round(decimals=3)
+            pd.plotting.table(ax=axes[index_it], data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig.tight_layout()
         return fig
     
