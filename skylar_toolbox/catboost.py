@@ -199,7 +199,7 @@ class CustomCatBoost:
         elif importance_type_sr == 'PredictionValuesChange':
             feature_importances_df = self.pvc_feature_importances_df
         else:
-            raise ValueError(f'importance_type_sr must be one of {permitted_importance_types_lt}')
+            raise ValueError(f'Permitted values of importance_type_sr are {permitted_importance_types_lt}')
         implemented_plot_types_lt = ['all', 'top_bottom', 'abs_diff', 'pct_diff']
         if plot_type_sr == 'all':
             plot_df = feature_importances_df[['learn', 'validation']]
@@ -631,7 +631,7 @@ class CustomCatBoostCV:
         elif importance_type_sr == 'PredictionValuesChange':
             feature_importances_df = self.pvc_feature_importances_df
         else:
-            raise ValueError(f'importance_type_sr must be one of {permitted_importance_types_lt}')
+            raise ValueError(f'Permitted values of importance_type_sr are {permitted_importance_types_lt}')
         xs_df = ys_df = feature_importances_df.filter(like='mean').rename(columns=lambda x: x.split('_')[0])
         xerrs_df = yerrs_df = feature_importances_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
         data_df = ys_df.describe().round(decimals=3)
@@ -652,6 +652,17 @@ class CustomCatBoostCV:
                 axes[index_it].axvline(x=0, c='k', ls=':')
                 axes[index_it].set(title=split_sr)
             fig.tight_layout()
+            return fig
+        elif plot_type_sr in ['abs_diff', 'pct_diff']:
+            top_bottom_df = feature_importances_df.nlargest(n=10, columns=plot_type_sr) if plot_type_sr == 'abs_diff' \
+                else feature_importances_df.nsmallest(n=10, columns=plot_type_sr)
+            ax = (
+                top_bottom_df
+                .sort_values(by=plot_type_sr, ascending=True if plot_type_sr == 'abs_diff' else False)
+                .loc[:, ['learn', 'validation']]
+                .plot(kind='barh'))
+            ax.axvline(x=0, c='k', ls=':')
+            fig = ax.figure
             return fig
         else:
             raise NotImplementedError(f'plot_type_sr must be one of {implemented_plot_types_lt}')
@@ -727,6 +738,8 @@ class CustomCatBoostCV:
                 .rename(columns=lambda x: f'{split_sr}_{x}' if '_' not in x else x))
         # Sort
         feature_importances_df.sort_values(by='validation_mean', ascending=False, inplace=True)
+        # Get differences
+        feature_importances_df = steda.get_differences(df=feature_importances_df, columns_lt=['learn_mean', 'validation_mean'])
         return feature_importances_df
     
 # =============================================================================
@@ -1822,10 +1835,10 @@ class FeatureSelector:
 
         '''
         ranks_df = (
-            self.results_df
-            .iloc[:, :2]
+            self.results_df[['scores', 'pct_diffs', 'cnt_features']]
             .assign(
                 scores = lambda x: x['scores'].rank(pct=True, ascending=False if self.objective_sr == 'maximize' else True),
+                pct_diffs = lambda x: x['pct_diffs'].rank(pct=True),
                 cnt_features = lambda x: x['cnt_features'].rank(pct=True),
                 combined = lambda x: x.sum(axis=1))
             .rename(columns=lambda x: f'{x}_rank'))
