@@ -1081,7 +1081,8 @@ class ExampleSelector:
             examples_ix, drop_ix, keep_ix = self._get_examples(X=X, ei=ei)
 
             # Get and print result
-            result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, examples_ix=examples_ix, drop_ix=drop_ix, keep_ix=keep_ix)
+            pct_diff_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'pct_diff']
+            result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, pct_diff_ft=pct_diff_ft, examples_ix=examples_ix, drop_ix=drop_ix, keep_ix=keep_ix)
             results_lt.append(result_dt)
             self._print_result(result_dt=result_dt)
 
@@ -1307,6 +1308,7 @@ class ExampleSelector:
             self,
             iteration_it: int,
             score_ft: float,
+            pct_diff_ft: float,
             examples_ix: pd.Index,
             drop_ix: pd.Index,
             keep_ix: pd.Index):
@@ -1335,6 +1337,7 @@ class ExampleSelector:
         result_dt = {
             'iterations': iteration_it,
             'scores': score_ft,
+            'pct_diffs': pct_diff_ft,
             'cnt_examples': examples_ix.shape[0],
             'cnt_drop': drop_ix.shape[0],
             'cnt_keep': keep_ix.shape[0],
@@ -1395,10 +1398,10 @@ class ExampleSelector:
 
         '''
         ranks_df = (
-            self.results_df
-            .iloc[:, :2]
+            self.results_df[['scores', 'pct_diffs', 'cnt_examples']]
             .assign(
                 scores = lambda x: x['scores'].rank(pct=True, ascending=False if self.objective_sr == 'maximize' else True),
+                pct_diffs = lambda x: x['pct_diffs'].rank(pct=True),
                 cnt_examples = lambda x: x['cnt_examples'].rank(pct=True),
                 combined = lambda x: x.sum(axis=1))
             .rename(columns=lambda x: f'{x}_rank'))
@@ -1527,7 +1530,8 @@ class FeatureSelector:
             features_ix, drop_ix, keep_ix = self._get_features(X=X, ccbcv=ccbcv)
             
             # Get and print result
-            result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, features_ix=features_ix, drop_ix=drop_ix, keep_ix=keep_ix)
+            pct_diff_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'pct_diff']
+            result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, pct_diff_ft=pct_diff_ft, 
             results_lt.append(result_dt)
             self._print_result(result_dt=result_dt)
             
@@ -1747,6 +1751,7 @@ class FeatureSelector:
             self, 
             iteration_it: int, 
             score_ft: float, 
+            pct_diff_ft: float,
             features_ix: pd.Index, 
             drop_ix: pd.Index, 
             keep_ix: pd.Index):
@@ -1775,6 +1780,7 @@ class FeatureSelector:
         result_dt = {
             'iterations': iteration_it,
             'scores': score_ft,
+            'pct_diff_ft': pct_diff_ft,
             'cnt_features': features_ix.shape[0],
             'cnt_drop': drop_ix.shape[0],
             'cnt_keep': keep_ix.shape[0],
