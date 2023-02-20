@@ -18,32 +18,66 @@ from skylar_toolbox import exploratory_data_analysis as steda
 class CustomCatBoost:
     def __init__(
             self, 
-            cat_boost_dt: dict, 
-            binary_bl: bool):
+            model_type_sr: str,
+            cat_boost_dt: dict):
         '''
-        Wraps CatBoost model to provide additional tools for model inspection
+        Wraps CatBoost model...
+        - Storing metadata
+        - Providing methods for plotting, etc.
 
         Parameters
         ----------
+        model_type_sr : str
+            Model type.
         cat_boost_dt : dict
-            Parameters passed to cb.CatBoost.
-        binary_bl : bool
-            Flag for binary classification.
+            Parameters passed to CatBoost.
+            
+        Raises
+        ------
+        NotImplementedError
+            Implemented values of model_type_sr are ['classification', 'regression'].
+        KeyError
+            Required key "{required_key_sr}" is not in cat_boost_dt (e.g., train_dir).
 
         Returns
         -------
         None.
 
         '''
-        required_keys_lt = [
-            'loss_function', 'eval_metric', 'custom_metric', 'random_seed', 'iterations', 'verbose',
-            'early_stopping_rounds', 'use_best_model', 'task_type', 'cat_features', 'monotone_constraints']
+        # model_type_sr
+        implemented_model_types_lt = ['classification', 'regression']
+        if model_type_sr not in implemented_model_types_lt:
+            raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
+        self.model_type_sr = model_type_sr
+
+        # cat_boost_dt
+        required_keys_lt = ['train_dir']
         for required_key_sr in required_keys_lt:
-            if required_key_sr not in cat_boost_dt.keys():
-                raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
-        self.cat_boost_dt = cat_boost_dt
-        self.cbm = cb.CatBoost(params=cat_boost_dt)
-        self.binary_bl = binary_bl
+             if required_key_sr not in cat_boost_dt.keys():
+                 raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
+        general_defaults_dt = {
+            'cat_features': [],
+            'early_stopping_rounds': 100,
+            'iterations': 1_000,
+            'monotone_constraints': {},
+            'random_seed': 0,
+            'task_type': 'CPU',
+            'use_best_model': True}
+        if model_type_sr == 'classification':
+            model_defaults_dt = {
+                'loss_function': 'Logloss',
+                'eval_metric': 'AUC',
+                'custom_metric': ['Logloss', 'AUC', 'PRAUC', 'F1', 'Precision', 'Recall']}
+            general_defaults_dt.update(model_defaults_dt)
+        elif model_type_sr == 'regression':
+            model_defaults_dt = {
+                'loss_function': 'RMSE',
+                'eval_metric': 'R2',
+                'custom_metric': ['RMSE', 'R2', 'MSLE', 'MAE', 'MAPE', 'MedianAbsoluteError']}
+            general_defaults_dt.update(model_defaults_dt)
+        general_defaults_dt.update(cat_boost_dt)
+        general_defaults_dt['verbose'] = general_defaults_dt['iterations'] // 10
+        self.cat_boost_dt = general_defaults_dt
     
     def fit(
             self, 
@@ -1475,7 +1509,7 @@ class FeatureSelector:
         self.ranks_df = self._get_ranks()
         return self
 
-    def weight_rank(
+    def weight_ranks(
             self, 
             weights_dt: dict):
         '''
