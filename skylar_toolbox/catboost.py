@@ -53,29 +53,7 @@ class CustomCatBoost:
         for required_key_sr in required_keys_lt:
              if required_key_sr not in cat_boost_dt.keys():
                  raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
-        general_defaults_dt = {
-            'cat_features': [],
-            'early_stopping_rounds': 100,
-            'iterations': 1_000,
-            'monotone_constraints': {},
-            'random_seed': 0,
-            'task_type': 'CPU',
-            'use_best_model': True}
-        if model_type_sr == 'classification':
-            model_defaults_dt = {
-                'loss_function': 'Logloss',
-                'eval_metric': 'AUC',
-                'custom_metric': ['Logloss', 'AUC', 'PRAUC', 'F1', 'Precision', 'Recall']}
-            general_defaults_dt.update(model_defaults_dt)
-        elif model_type_sr == 'regression':
-            model_defaults_dt = {
-                'loss_function': 'RMSE',
-                'eval_metric': 'R2',
-                'custom_metric': ['RMSE', 'R2', 'MSLE', 'MAE', 'MAPE', 'MedianAbsoluteError']}
-            general_defaults_dt.update(model_defaults_dt)
-        general_defaults_dt.update(cat_boost_dt)
-        general_defaults_dt['verbose'] = general_defaults_dt['iterations'] // 10
-        self.cat_boost_dt = general_defaults_dt
+        self.cat_boost_dt = get_parameters(model_type_sr=model_type_sr, cat_boost_dt=cat_boost_dt)
     
     def fit(
             self, 
@@ -488,6 +466,8 @@ class CustomCatBoostCV:
 
         Raises
         ------
+        NotImplementedError
+            Implemented values of model_type_sr are {implemented_model_types_lt}.
         KeyError
             Required key "{required_key_sr}" is not in cat_boost_dt.
 
@@ -495,13 +475,21 @@ class CustomCatBoostCV:
         -------
         None.
 
-        '''
+        '''        
+        # model_type_sr
+        implemented_model_types_lt = ['classification', 'regression']
+        if model_type_sr not in implemented_model_types_lt:
+            raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
         self.model_type_sr = model_type_sr
+
+        # cat_boost_dt
         required_keys_lt = ['train_dir']
         for required_key_sr in required_keys_lt:
-            if required_key_sr not in cat_boost_dt.keys():
-                raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
-        self.cat_boost_dt = cat_boost_dt
+             if required_key_sr not in cat_boost_dt.keys():
+                 raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
+        self.cat_boost_dt = get_parameters(model_type_sr=model_type_sr, cat_boost_dt=cat_boost_dt)
+        
+        # sklearn_splitter
         self.sklearn_splitter = sklearn_splitter
         
     def fit(
@@ -546,7 +534,6 @@ class CustomCatBoostCV:
 
             # Fit model
             ccb = CustomCatBoost(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt)
-            self.cat_boost_dt = ccb.cbm.get_params()
             ccb.fit(
                 X_train=X.iloc[train_ay, :],
                 y_train=y.iloc[train_ay], 
@@ -1036,7 +1023,7 @@ class ExampleSelector:
         for required_key_sr in required_keys_lt:
             if required_key_sr not in cat_boost_dt.keys():
                 raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
-        self.cat_boost_dt = cat_boost_dt
+        self.cat_boost_dt = get_parameters(model_type_sr=model_type_sr, cat_boost_dt=cat_boost_dt)
         self.sklearn_splitter = sklearn_splitter
         permitted_objectives_lt = ['minimize', 'maximize']
         if objective_sr not in permitted_objectives_lt:
@@ -1497,11 +1484,11 @@ class FeatureSelector:
 
         '''
         self.model_type_sr = model_type_sr
-        required_keys_lt = ['train_dir', 'cat_features', 'monotone_constraints']
+        required_keys_lt = ['train_dir']
         for required_key_sr in required_keys_lt:
             if required_key_sr not in cat_boost_dt.keys():
                 raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
-        self.cat_boost_dt = cat_boost_dt
+        self.cat_boost_dt = get_parameters(model_type_sr=model_type_sr, cat_boost_dt=cat_boost_dt)
         self.sklearn_splitter = sklearn_splitter
         permitted_objectives_lt = ['minimize', 'maximize']
         if objective_sr not in permitted_objectives_lt:
@@ -1904,3 +1891,59 @@ class FeatureSelector:
         '''
         best_iteration_it = self.ranks_df.iloc[:, -1].idxmin()
         return best_iteration_it
+    
+# =============================================================================
+# get_parameters
+# =============================================================================
+
+def get_parameters(
+        model_type_sr: str,
+        cat_boost_dt: dict):
+    '''
+    Gets parameters (including defaults if not supplied)
+
+    Parameters
+    ----------
+    model_type_sr : str
+        Model type.
+    cat_boost_dt : dict
+        User-supplied parameters.
+
+    Raises
+    ------
+    NotImplementedError
+        Implemented values of model_type_sr are {implemented_model_types_lt}.
+
+    Returns
+    -------
+    general_defaults_dt : dict
+        Parameters passed to CatBoost.
+
+    '''
+    general_defaults_dt = {
+        'cat_features': [],
+        'early_stopping_rounds': 100,
+        'iterations': 1_000,
+        'monotone_constraints': {},
+        'random_seed': 0,
+        'task_type': 'CPU',
+        'use_best_model': True}
+    implemented_model_types_lt = ['classification', 'regression']
+    if model_type_sr == 'classification':
+        model_defaults_dt = {
+            'loss_function': 'Logloss',
+            'eval_metric': 'AUC',
+            'custom_metric': ['Logloss', 'AUC', 'PRAUC', 'F1', 'Precision', 'Recall']}
+        general_defaults_dt.update(model_defaults_dt)
+    elif model_type_sr == 'regression':
+        model_defaults_dt = {
+            'loss_function': 'RMSE',
+            'eval_metric': 'R2',
+            'custom_metric': ['RMSE', 'R2', 'MSLE', 'MAE', 'MAPE', 'MedianAbsoluteError']}
+        general_defaults_dt.update(model_defaults_dt)
+    else:
+        raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
+    general_defaults_dt.update(cat_boost_dt)
+    general_defaults_dt['verbose'] = general_defaults_dt['iterations'] // 10
+    return general_defaults_dt
+    
