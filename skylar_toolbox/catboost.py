@@ -106,7 +106,7 @@ class CustomCatBoost:
 
         '''
         # Fit model
-        self.cbm.fit(X=X_train, y=y_train, eval_set=(X_valid, y_valid))
+        self.cbm = cb.CatBoost(params=self.cat_boost_dt).fit(X=X_train, y=y_train, eval_set=(X_valid, y_valid))
         
         # Get evals result
         self.evals_result_df = self._get_evals_result()
