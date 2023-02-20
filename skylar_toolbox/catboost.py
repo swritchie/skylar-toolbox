@@ -18,32 +18,64 @@ from skylar_toolbox import exploratory_data_analysis as steda
 class CustomCatBoost:
     def __init__(
             self, 
-            cat_boost_dt: dict, 
-            binary_bl: bool):
+            model_type_sr: str,
+            cat_boost_dt: dict):
         '''
-        Wraps CatBoost model to provide additional tools for model inspection
+        Wraps cb.CatBoost, storing metadata and providing methods for plotting
 
         Parameters
         ----------
+        model_type_sr : str
+            Model type.
         cat_boost_dt : dict
-            Parameters passed to cb.CatBoost.
-        binary_bl : bool
-            Flag for binary classification.
+            Parameters passed to CatBoost.
+
+        Raises
+        ------
+        NotImplementedError
+            Implemented values of model_type_sr are {implemented_model_types_lt}.
+        KeyError
+            Required key "{required_key_sr}" is not in cat_boost_dt.
 
         Returns
         -------
         None.
 
         '''
-        required_keys_lt = [
-            'loss_function', 'eval_metric', 'custom_metric', 'random_seed', 'iterations', 'verbose',
-            'early_stopping_rounds', 'use_best_model', 'task_type', 'cat_features', 'monotone_constraints']
+        # model_type_sr
+        implemented_model_types_lt = ['classification', 'regression']
+        if model_type_sr not in implemented_model_types_lt:
+            raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
+        self.model_type_sr = model_type_sr
+
+        # cat_boost_dt
+        required_keys_lt = ['train_dir']
         for required_key_sr in required_keys_lt:
-            if required_key_sr not in cat_boost_dt.keys():
-                raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
-        self.cat_boost_dt = cat_boost_dt
-        self.cbm = cb.CatBoost(params=cat_boost_dt)
-        self.binary_bl = binary_bl
+             if required_key_sr not in cat_boost_dt.keys():
+                 raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
+        general_defaults_dt = {
+            'cat_features': [],
+            'early_stopping_rounds': 100,
+            'iterations': 1_000,
+            'monotone_constraints': {},
+            'random_seed': 0,
+            'task_type': 'CPU',
+            'use_best_model': True}
+        if model_type_sr == 'classification':
+            model_defaults_dt = {
+                'loss_function': 'Logloss',
+                'eval_metric': 'AUC',
+                'custom_metric': ['Logloss', 'AUC', 'PRAUC', 'F1', 'Precision', 'Recall']}
+            general_defaults_dt.update(model_defaults_dt)
+        elif model_type_sr == 'regression':
+            model_defaults_dt = {
+                'loss_function': 'RMSE',
+                'eval_metric': 'R2',
+                'custom_metric': ['RMSE', 'R2', 'MSLE', 'MAE', 'MAPE', 'MedianAbsoluteError']}
+            general_defaults_dt.update(model_defaults_dt)
+        general_defaults_dt.update(cat_boost_dt)
+        general_defaults_dt['verbose'] = general_defaults_dt['iterations'] // 10
+        self.cat_boost_dt = general_defaults_dt
     
     def fit(
             self, 
@@ -52,7 +84,7 @@ class CustomCatBoost:
             X_valid: pd.DataFrame, 
             y_valid: pd.Series):
         '''
-        Fits model and collects metadata
+        Fits model and stores metadata
 
         Parameters
         ----------
@@ -72,7 +104,7 @@ class CustomCatBoost:
 
         '''
         # Fit model
-        self.cbm.fit(X=X_train, y=y_train, eval_set=(X_valid, y_valid))
+        self.cbm = cb.CatBoost(params=self.cat_boost_dt).fit(X=X_train, y=y_train, eval_set=(X_valid, y_valid))
         
         # Get evals result
         self.evals_result_df = self._get_evals_result()
@@ -103,7 +135,7 @@ class CustomCatBoost:
     
     def plot_evals_result(self):
         '''
-        Plots learning curve of eval metrics v. iterations
+        Plots evals result per iteration
 
         Returns
         -------
@@ -119,7 +151,7 @@ class CustomCatBoost:
     
     def plot_eval_metrics(self):
         '''
-        Plots train and validation eval metrics as bars along with table
+        Plots bars of eval metrics on train and validation with table
 
         Returns
         -------
@@ -127,8 +159,11 @@ class CustomCatBoost:
             Figure.
 
         '''
-        ax = self.eval_metrics_df.iloc[:, :2].plot(kind='bar')
-        pd.plotting.table(ax=ax, data=self.eval_metrics_df.iloc[:, [0, 1, -1]].round(decimals=3), bbox=[1.25, 0, 0.5, 1])
+        columns_lt = ['learn', 'validation', 'pct_diff']
+        plot_df = self.eval_metrics[columns_lt[:-1]]
+        data_df = self.eval_metrics[columns_lt].round(decimals=3)
+        ax = plot_df.plot(kind='bar')
+        pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
         fig = ax.figure
         return fig
     
@@ -137,18 +172,21 @@ class CustomCatBoost:
             importance_type_sr: str, 
             plot_type_sr: str):
         '''
-        Plots train and validation feature importances (either 'LossFunctionChange' or 'PredictionValuesChange'):
-            - 'all': line with all importances and table with description
-            - 'top_bottom': horizontal bar with top and bottom features
-            - 'abs_diff': horizontal bar of features with largest difference in train and validation importances
-            - 'pct_diff': horizontal bar of features with largest percent difference in train and validation importances
+        Plots feature importances
 
         Parameters
         ----------
         importance_type_sr : str
-            Type of feature importance. Must be one of ['LossFunctionChange', 'PredictionValuesChange']
+            Importance type.
         plot_type_sr : str
-            Type of plot. Must be one of ['all', 'top_bottom', 'abs_diff', 'pct_diff'].
+            Plot type.
+
+        Raises
+        ------
+        ValueError
+            Permitted values of importance_type_sr are {permitted_importance_types_lt}.
+        NotImplementedError
+            Implemented values of plot_type_sr are {implemented_plot_types_lt}.
 
         Returns
         -------
@@ -162,21 +200,23 @@ class CustomCatBoost:
         elif importance_type_sr == 'PredictionValuesChange':
             feature_importances_df = self.pvc_feature_importances_df
         else:
-            raise ValueError(f'importance_type_sr must be one of {permitted_importance_types_lt}')
+            raise ValueError(f'Permitted values of importance_type_sr are {permitted_importance_types_lt}')
         implemented_plot_types_lt = ['all', 'top_bottom', 'abs_diff', 'pct_diff']
         if plot_type_sr == 'all':
-            ax = feature_importances_df.iloc[:, :2].plot()
+            plot_df = feature_importances_df[['learn', 'validation']]
+            data_df = plot_df.describe().round(decimals=3)
+            ax = plot_df.plot()
             ax.set(xticks=[])
             ax.axhline(y=0, c='k', ls=':')
-            pd.plotting.table(ax=ax, data=feature_importances_df.iloc[:, :2].describe().round(decimals=3), bbox=[1.25, 0, 0.5, 1])
+            pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
             fig = ax.figure
             return fig
         elif plot_type_sr == 'top_bottom':
             fig, axes = plt.subplots(nrows=2, sharex=True)
             for index_it, split_sr in enumerate(iterable=['learn', 'validation']):
                 pd.concat(objs=[
-                    feature_importances_df.iloc[:, index_it].nsmallest(),
-                    feature_importances_df.iloc[:, index_it].nlargest()[::-1]]).plot(kind='barh', ax=axes[index_it])
+                    feature_importances_df[split_sr].nsmallest(),
+                    feature_importances_df[split_sr].nlargest()[::-1]]).plot(kind='barh', ax=axes[index_it])
                 axes[index_it].axvline(x=0, c='k', ls=':')
                 axes[index_it].set(title=split_sr)
             fig.tight_layout()
@@ -187,13 +227,13 @@ class CustomCatBoost:
             ax = (
                 top_bottom_df
                 .sort_values(by=plot_type_sr, ascending=True if plot_type_sr == 'abs_diff' else False)
-                .iloc[:, :2]
+                .loc[:, ['learn', 'validation']]
                 .plot(kind='barh'))
             ax.axvline(x=0, c='k', ls=':')
             fig = ax.figure
             return fig
         else:
-            raise NotImplementedError(f'plot_type_sr must be one of {implemented_plot_types_lt}')
+            raise NotImplementedError(f'Implemented values of plot_type_sr are {implemented_plot_types_lt}')
             
     def plot_interaction_strengths(self):
         '''
@@ -205,17 +245,18 @@ class CustomCatBoost:
             Figure.
 
         '''
-        interaction_strengths_ss = self.interaction_strengths_df.iloc[:, -1]
+        interaction_strengths_ss = self.interaction_strengths_df['strengths']
+        data_ss = interaction_strengths_ss.describe().round(decimals=3)
         ax = interaction_strengths_ss.plot()
         ax.set(xticks=[])
         ax.axhline(y=0, c='k', ls=':')
-        pd.plotting.table(ax=ax, data=interaction_strengths_ss.describe().round(decimals=3), bbox=[1.25, 0, 0.25, 1])
+        pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig = ax.figure
         return fig
     
     def plot_predictions(self):
         '''
-        Plots histograms or KDEs of train and validation targets and predictions with table
+        Plots predictions as histogram (classification) or KDE (regression)
 
         Returns
         -------
@@ -228,8 +269,8 @@ class CustomCatBoost:
             y_true = self.y_train if split_sr == 'learn' else self.y_valid
             y_pred = self.y_train_pred if split_sr == 'learn' else self.y_valid_pred
             data_df = pd.concat(objs=[y_true, y_pred], axis=1).describe().round(decimals=3)
-            plot_dt = dict(kind='hist' if self.binary_bl else 'kde')
-            if self.binary_bl: 
+            plot_dt = dict(kind='hist' if self.model_type_sr == 'classification' else 'kde')
+            if self.model_type_sr == 'classification': 
                 plot_dt['bins'] = 30
             y_true.plot(ax=ax, **plot_dt)
             y_pred.plot(ax=ax, **plot_dt)
@@ -241,7 +282,7 @@ class CustomCatBoost:
     
     def delete_predictions_and_targets(self):
         '''
-        Deletes predictions and targets from instance
+        Deletes predictions and targets
 
         Returns
         -------
@@ -255,12 +296,12 @@ class CustomCatBoost:
     
     def _get_evals_result(self):
         '''
-        Gets evals result data frame
+        Gets evals result as data frame
 
         Returns
         -------
         evals_result_df : pd.DataFrame
-            DESCRIPTION.
+            Evals result.
 
         '''
         evals_result_df = pd.DataFrame(data={
@@ -273,7 +314,7 @@ class CustomCatBoost:
             self, 
             X: pd.DataFrame):
         '''
-        Gets predictions as series
+        Gets predictions
 
         Parameters
         ----------
@@ -286,7 +327,7 @@ class CustomCatBoost:
             Predictions.
 
         '''
-        if self.binary_bl:
+        if self.model_type_sr == 'classification':
             predictions_ay = self.cbm.predict(data=X, prediction_type='Probability')[:, 1]
         else:
             predictions_ay = self.cbm.predict(data=X)
@@ -314,7 +355,8 @@ class CustomCatBoost:
 
         '''
         label_ss = y_true
-        approx_ss = y_pred.apply(func=sysl.logit) if self.binary_bl else y_pred
+        approx_ss = y_pred.apply(func=sysl.logit) \
+            if self.model_type_sr == 'classification' else y_pred
         self.metrics_lt = self.cat_boost_dt['custom_metric']
         eval_metrics_dt = {
             metric_sr: cbus.eval_metric(label=label_ss.values, approx=approx_ss.values, metric=metric_sr)[0] 
@@ -323,7 +365,7 @@ class CustomCatBoost:
     
     def _compare_eval_metrics(self):
         '''
-        Gets difference in eval metrics for train and validation
+        Compares train and validation eval metrics
 
         Returns
         -------
@@ -353,7 +395,7 @@ class CustomCatBoost:
         y : pd.Series
             Target vector.
         type_sr : str
-            Feature importance type.
+            Importance type.
         name_sr : str
             Split name.
 
@@ -378,7 +420,7 @@ class CustomCatBoost:
             X_valid: pd.DataFrame, 
             type_sr: str):
         '''
-        Gets difference in feature importances for train and validation
+        Compares train and validation feature importances
 
         Parameters
         ----------
@@ -387,7 +429,7 @@ class CustomCatBoost:
         X_valid : pd.DataFrame
             Validation feature matrix.
         type_sr : str
-            Feature importance type.
+            Importance type.
 
         Returns
         -------
@@ -429,28 +471,37 @@ class CustomCatBoost:
 class CustomCatBoostCV:
     def __init__(
             self, 
+            model_type_sr: str,
             cat_boost_dt: dict, 
-            binary_bl: bool, 
             sklearn_splitter):
         '''
-        Cross-validates wrapped model and provides additional model inspection tools
+        Cross-validates wrapped model
 
         Parameters
         ----------
+        model_type_sr : str
+            Model type.
         cat_boost_dt : dict
-            Parameters passed to cb.CatBoost.
-        binary_bl : bool
-            Flag for binary classification.
+            Parameters passed to CatBoost.
         sklearn_splitter : TYPE
-            Instance of scikit-learn splitter class.
+            Splitter from scikit-learn.
+
+        Raises
+        ------
+        KeyError
+            Required key "{required_key_sr}" is not in cat_boost_dt.
 
         Returns
         -------
         None.
 
         '''
+        self.model_type_sr = model_type_sr
+        required_keys_lt = ['train_dir']
+        for required_key_sr in required_keys_lt:
+            if required_key_sr not in cat_boost_dt.keys():
+                raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
         self.cat_boost_dt = cat_boost_dt
-        self.binary_bl = binary_bl
         self.sklearn_splitter = sklearn_splitter
         
     def fit(
@@ -458,7 +509,7 @@ class CustomCatBoostCV:
             X: pd.DataFrame, 
             y: pd.Series):
         '''
-        Fits model and collects metadata
+        Fits model and stores metadata
 
         Parameters
         ----------
@@ -494,7 +545,7 @@ class CustomCatBoostCV:
             self.cat_boost_dt['train_dir'] = output_subdirectory_sr
 
             # Fit model
-            ccb = CustomCatBoost(cat_boost_dt=self.cat_boost_dt, binary_bl=self.binary_bl)
+            ccb = CustomCatBoost(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt)
             ccb.fit(
                 X_train=X.iloc[train_ay, :],
                 y_train=y.iloc[train_ay], 
@@ -516,12 +567,17 @@ class CustomCatBoostCV:
             self, 
             strategy_sr: str):
         '''
-        Ensembles models trained on different subsets
+        Ensembles models trained on different subsets of data
 
         Parameters
         ----------
         strategy_sr : str
-            How models should be weighted. Must be one of ['weight_by_score', 'weight_equally']
+            Strategy for weighting models in ensemble.
+
+        Raises
+        ------
+        NotImplementedError
+            Implemented values of strategy_sr are {implemented_strategies_lt}.
 
         Returns
         -------
@@ -537,12 +593,12 @@ class CustomCatBoostCV:
         elif strategy_sr == 'weight_equally':
             self.cbm = cb.sum_models(models=models_lt)
         else:
-            raise NotImplementedError(f'strategy_sr must be one of {implemented_strategies_lt}')
+            raise NotImplementedError(f'Implemented values of strategy_sr are {implemented_strategies_lt}')
         return self
     
     def plot_eval_metrics(self):
         '''
-        Plots eval metrics with standard errors
+        Plots eval metrics with error bars
 
         Returns
         -------
@@ -553,7 +609,7 @@ class CustomCatBoostCV:
         # Get data frames
         ys_df = self.eval_metrics_df.filter(like='mean').rename(columns=lambda x: x.split('_')[0])
         yerrs_df = self.eval_metrics_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
-        data_df = self.eval_metrics_df.filter(regex='mean|se2').round(decimals=3)
+        data_df = self.eval_metrics_df[['learn_mean', 'validation_mean', 'pct_diff']].round(decimals=3)
         # Plot
         ax = ys_df.plot(kind='bar', yerr=yerrs_df)
         pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 1, 1])
@@ -565,14 +621,21 @@ class CustomCatBoostCV:
             importance_type_sr: str, 
             plot_type_sr: str):
         '''
-        Plots feature importances with standard errors
+        Plots feature importances with error bars
 
         Parameters
         ----------
         importance_type_sr : str
-            Type of feature importance. Must be one of ['LossFunctionChange', 'PredictionValuesChange']
+            Importance type.
         plot_type_sr : str
-            Type of plot. Must be one of ['all', 'top_bottom'].
+            Plot type.
+
+        Raises
+        ------
+        ValueError
+            Permitted values of importance_type_sr are {permitted_importance_types_lt}.
+        NotImplementedError
+            Implemented values of plot_type_sr are {implemented_plot_types_lt}.
 
         Returns
         -------
@@ -586,11 +649,11 @@ class CustomCatBoostCV:
         elif importance_type_sr == 'PredictionValuesChange':
             feature_importances_df = self.pvc_feature_importances_df
         else:
-            raise ValueError(f'importance_type_sr must be one of {permitted_importance_types_lt}')
+            raise ValueError(f'Permitted values of importance_type_sr are {permitted_importance_types_lt}')
         xs_df = ys_df = feature_importances_df.filter(like='mean').rename(columns=lambda x: x.split('_')[0])
         xerrs_df = yerrs_df = feature_importances_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
         data_df = ys_df.describe().round(decimals=3)
-        implemented_plot_types_lt = ['all', 'top_bottom']
+        implemented_plot_types_lt = ['all', 'top_bottom', 'abs_diff', 'pct_diff']
         if plot_type_sr == 'all':
             ax = ys_df.plot(yerr=yerrs_df)
             ax.set(xticks=[])
@@ -601,19 +664,30 @@ class CustomCatBoostCV:
             fig, axes = plt.subplots(nrows=2, sharex=True)
             for index_it, split_sr in enumerate(iterable=['learn', 'validation']):
                 concat_df = pd.concat(objs=[
-                    xs_df.iloc[:, index_it].nsmallest(),
-                    xs_df.iloc[:, index_it].nlargest()[::-1]])
+                    xs_df[split_sr].nsmallest(),
+                    xs_df[split_sr].nlargest()[::-1]])
                 concat_df.plot(kind='barh', xerr=xerrs_df.loc[concat_df.index, :], ax=axes[index_it])
                 axes[index_it].axvline(x=0, c='k', ls=':')
                 axes[index_it].set(title=split_sr)
             fig.tight_layout()
             return fig
+        elif plot_type_sr in ['abs_diff', 'pct_diff']:
+            top_bottom_df = feature_importances_df.nlargest(n=10, columns=plot_type_sr) if plot_type_sr == 'abs_diff' \
+                else feature_importances_df.nsmallest(n=10, columns=plot_type_sr)
+            ax = (
+                top_bottom_df
+                .sort_values(by=plot_type_sr, ascending=True if plot_type_sr == 'abs_diff' else False)
+                .loc[:, ['learn', 'validation']]
+                .plot(kind='barh'))
+            ax.axvline(x=0, c='k', ls=':')
+            fig = ax.figure
+            return fig
         else:
-            raise NotImplementedError(f'plot_type_sr must be one of {implemented_plot_types_lt}')
+            raise NotImplementedError(f'Implemented values of plot_type_sr are {implemented_plot_types_lt}')
             
     def delete_predictions_and_targets(self):
         '''
-        Deletes predictions and targets from all model instances
+        Deletes predictions and targets
 
         Returns
         -------
@@ -627,7 +701,7 @@ class CustomCatBoostCV:
     
     def _compare_eval_metrics(self):
         '''
-        Gets mean and standard error for eval metrics
+        Compares train and validation eval metrics
 
         Returns
         -------
@@ -637,7 +711,7 @@ class CustomCatBoostCV:
         '''
         # Concatenate them
         eval_metrics_df = pd.concat(objs=[
-            ccb.eval_metrics_df.iloc[:, :2].rename(columns=lambda x: f'{x}_{index_it}')
+            ccb.eval_metrics_df[['learn', 'validation']].rename(columns=lambda x: f'{x}_{index_it}')
             for index_it, ccb in enumerate(iterable=self.models_lt)
         ], axis=1)
         # Get means
@@ -645,18 +719,20 @@ class CustomCatBoostCV:
             eval_metrics_df = (
                 steda.get_means(df=eval_metrics_df, columns_lt=eval_metrics_df.filter(like=split_sr).columns.tolist())
                 .rename(columns=lambda x: f'{split_sr}_{x}' if '_' not in x else x))
+        # Get differences
+        eval_metrics_df = steda.get_differences(df=eval_metrics_df, columns_lt=['learn_mean', 'validation_mean'])
         return eval_metrics_df
     
     def _compare_feature_importances(
             self, 
             type_sr: str):
         '''
-        Gets mean and standard error for feature importances
+        Compares train and validation feature importances
 
         Parameters
         ----------
         type_sr : str
-            Type of feature importance. Must be one of ['LossFunctionChange', 'PredictionValuesChange']
+            Importance type.
 
         Returns
         -------
@@ -667,12 +743,12 @@ class CustomCatBoostCV:
         # Concatenate them
         if type_sr == 'LossFunctionChange':
             feature_importances_df = pd.concat(objs=[
-                ccb.lfc_feature_importances_df.iloc[:, :2].rename(columns=lambda x: f'{x}_{index_it}')
+                ccb.lfc_feature_importances_df[['learn', 'validation']].rename(columns=lambda x: f'{x}_{index_it}')
                 for index_it, ccb in enumerate(iterable=self.models_lt)
             ], axis=1)
         elif type_sr == 'PredictionValuesChange':
             feature_importances_df = pd.concat(objs=[
-                ccb.pvc_feature_importances_df.iloc[:, :2].rename(columns=lambda x: f'{x}_{index_it}')
+                ccb.pvc_feature_importances_df[['learn', 'validation']].rename(columns=lambda x: f'{x}_{index_it}')
                 for index_it, ccb in enumerate(iterable=self.models_lt)
             ], axis=1)
         # Get means
@@ -682,6 +758,8 @@ class CustomCatBoostCV:
                 .rename(columns=lambda x: f'{split_sr}_{x}' if '_' not in x else x))
         # Sort
         feature_importances_df.sort_values(by='validation_mean', ascending=False, inplace=True)
+        # Get differences
+        feature_importances_df = steda.get_differences(df=feature_importances_df, columns_lt=['learn_mean', 'validation_mean'])
         return feature_importances_df
     
 # =============================================================================
@@ -694,14 +772,14 @@ class ExampleInspector:
             ccbcv: CustomCatBoostCV, 
             losses_nlargest_n_it: int):
         '''
-        Gets losses and importances (of train on valid) per example
+        Gets losses and importances (of train on validation) per example
 
         Parameters
         ----------
         ccbcv : CustomCatBoostCV
-            CV model.
+            Cross-validated model.
         losses_nlargest_n_it : int
-            Number of validation examples used to get train example importances. 
+            Number of validation examples to use for train example importances.
 
         Returns
         -------
@@ -758,7 +836,7 @@ class ExampleInspector:
     
     def plot_losses(self):
         '''
-        Plots histogram of losses (with table)
+        Plots histogram of losses
 
         Returns
         -------
@@ -772,7 +850,7 @@ class ExampleInspector:
     
     def plot_example_importances(self):
         '''
-        Plots histogram of example importances (with table)
+        Plots histogram of example importances
 
         Returns
         -------
@@ -786,7 +864,7 @@ class ExampleInspector:
     
     def delete_predictions_and_targets(self):
         '''
-        Deletes predictions and targets from all model instances
+        Deletes predictions and targets
 
         Returns
         -------
@@ -802,20 +880,22 @@ class ExampleInspector:
             self, 
             ccb: CustomCatBoost):
         '''
-        Gets validation losses for models with loss functions of...
-        - Logloss
-        - RMSE
-        - MAE
+        Gets losses for all examples
 
         Parameters
         ----------
         ccb : CustomCatBoost
             Model.
 
+        Raises
+        ------
+        NotImplementedError
+            Implemented values of loss_function_sr are {implemented_loss_functions_lt}.
+
         Returns
         -------
         losses_ss : pd.Series
-            Validation losses.
+            Losses.
 
         '''
         loss_function_sr = ccb.cat_boost_dt['loss_function']
@@ -840,7 +920,7 @@ class ExampleInspector:
             losses_ss = np.abs(ccb.y_train - ccb.y_train_pred).rename(index='losses')
             return losses_ss
         else:
-            raise NotImplementedError(f'loss_function_sr must be one of {implemented_loss_functions_lt}')
+            raise NotImplementedError(f'Implemented values of loss_function_sr are {implemented_loss_functions_lt}')
     
     def _get_example_importances(
             self, 
@@ -849,12 +929,12 @@ class ExampleInspector:
             X: pd.DataFrame, 
             y: pd.Series):
         '''
-        Gets train example importances for largest validation losses
+        Gets example importances
 
         Parameters
         ----------
         largest_losses_ss : pd.Series
-            Largest validation losses (where "largest" is defined at init).
+            Largest validation losses.
         ccb : CustomCatBoost
             Model.
         X : pd.DataFrame
@@ -865,7 +945,7 @@ class ExampleInspector:
         Returns
         -------
         example_importances_ss : pd.Series
-            Train example importances.
+            Example importances.
 
         '''
         largest_losses_ix = largest_losses_ss.index
@@ -882,17 +962,17 @@ class ExampleInspector:
             self, 
             example_importances_lt: list):
         '''
-        Compare example importances across splits
+        Compares example importances across subsets of data
 
         Parameters
         ----------
         example_importances_lt : list
-            List of example importances.
+            Example importances per split.
 
         Returns
         -------
         example_importances_df : pd.DataFrame
-            Data frame of example importances with means, etc.
+            Example importances.
 
         '''
         example_importances_df = pd.concat(objs=[
@@ -905,56 +985,532 @@ class ExampleInspector:
         return example_importances_df
     
 # =============================================================================
-# FeatureSelector
+# ExampleSelector
 # =============================================================================
 
-class FeatureSelector:
+class ExampleSelector:
     def __init__(
-            self, 
-            cat_boost_dt: dict, 
-            binary_bl: bool, 
-            sklearn_splitter, 
-            objective_sr: str, 
-            strategy_sr: str, 
+            self,
+            model_type_sr: str,
+            cat_boost_dt: dict,
+            sklearn_splitter,
+            objective_sr: str,
+            losses_nlargest_n_it: int,
+            example_importances_nlargest_n_it: int,
             wait_it: int):
         '''
-        Iteratively removes features
+        Selects examples by iteratively removing those with highest validation losses
 
         Parameters
         ----------
+        model_type_sr : str
+            Model type.
         cat_boost_dt : dict
-            Parameters passed to cb.CatBoost.
-        binary_bl : bool
-            Flag for binary classification.
+            Parameters passed to CatBoost.
         sklearn_splitter : TYPE
-            Instance of scikit-learn splitter class.
+            Splitter from scikit-learn.
         objective_sr : str
-            One of ['minimize', 'maximize'].
-        strategy_sr : str
-            How features should be dropped. Must be one of ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_worst_mean'] for removing...
-            - Either all features with mean LFC <= 0
-            - Or all features with UCI < 0
-            - Or worst feature by mean LFC.
+            Objective for eval metric.
+        losses_nlargest_n_it : int
+            Number of validation examples to use for train example importances.
+        example_importances_nlargest_n_it : int
+            Number of train examples to drop.
         wait_it : int
-            Iterations to wait before stopping procedure.
+            Number of iterations to wait before terminating procedure.
+
+        Raises
+        ------
+        KeyError
+            Required key "{required_key_sr}" is not in cat_boost_dt.
+        ValueError
+            Permitted values of objective_sr are {permitted_objectives_lt}.
 
         Returns
         -------
         None.
 
         '''
+        self.model_type_sr = model_type_sr
+        required_keys_lt = ['train_dir']
+        for required_key_sr in required_keys_lt:
+            if required_key_sr not in cat_boost_dt.keys():
+                raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
         self.cat_boost_dt = cat_boost_dt
-        self.binary_bl = binary_bl
         self.sklearn_splitter = sklearn_splitter
         permitted_objectives_lt = ['minimize', 'maximize']
         if objective_sr not in permitted_objectives_lt:
-            raise ValueError(f'objective_sr must be one of {permitted_objectives_lt}')
+            raise ValueError(f'Permitted values of objective_sr are {permitted_objectives_lt}')
         self.objective_sr = objective_sr
         self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
         self.best_iteration_it = 0
-        implemented_strategies_lt = ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_worst_mean']
+        self.losses_nlargest_n_it = losses_nlargest_n_it
+        self.example_importances_nlargest_n_it = example_importances_nlargest_n_it
+        self.wait_it = wait_it
+
+    def fit(
+            self,
+            X: pd.DataFrame,
+            y: pd.Series):
+        '''
+        Fits models, stores metadata, and drops examples
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Make directory
+        output_directory_sr = self.cat_boost_dt['train_dir']
+        os.mkdir(path=output_directory_sr)
+
+        # Initialize
+        iteration_it = 0
+        self.models_lt = []
+        self.inspectors_lt = []
+        results_lt = []
+
+        # Loop
+        while True:
+            # Log
+            print('=' * 80)
+            print(f'Iteration: {iteration_it}')
+
+            # Update params
+            output_subdirectory_sr = '{}/{:03d}'.format(output_directory_sr, iteration_it)
+            self._update_params(train_dir_sr=output_subdirectory_sr)
+
+            # Fit model
+            ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
+            ccbcv.fit(X=X, y=y)
+            self.models_lt.append(ccbcv)
+
+            # Get score and update bests
+            score_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'validation_mean']
+            self._update_best_score_and_iteration(score_ft=score_ft, iteration_it=iteration_it)
+
+            # Fit inspector
+            ei = ExampleInspector(ccbcv=ccbcv, losses_nlargest_n_it=self.losses_nlargest_n_it)
+            ei.fit(X=X, y=y)
+            self.inspectors_lt.append(ei)
+
+            # Get features to drop and keep
+            examples_ix, drop_ix, keep_ix = self._get_examples(X=X, ei=ei)
+
+            # Get and print result
+            pct_diff_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'pct_diff']
+            result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, pct_diff_ft=pct_diff_ft, examples_ix=examples_ix, drop_ix=drop_ix, keep_ix=keep_ix)
+            results_lt.append(result_dt)
+            self._print_result(result_dt=result_dt)
+
+            # Evaluate whether to continue
+            if ((iteration_it - self.best_iteration_it == self.wait_it) or
+            (examples_ix.shape[0] == 1) or
+            (drop_ix.empty)):
+                break
+            else:
+                X.drop(index=drop_ix, inplace=True)
+                y.drop(index=drop_ix, inplace=True)
+                iteration_it += 1
+
+        # Get results
+        self.results_df = self._get_results(results_lt=results_lt)
+
+        # Get ranks
+        self.ranks_df = self._get_ranks()
+        return self
+
+    def weight_ranks(
+            self,
+            weights_dt: dict):
+        '''
+        Creates new combined rank by weighting components
+
+        Parameters
+        ----------
+        weights_dt : dict
+            Weights.
+
+        Raises
+        ------
+        KeyError
+            Required key "{required_key_sr}" is not in weights_dt.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        required_keys_lt = ['scores', 'pct_diffs', 'cnt_examples']
+        for required_key_sr in required_keys_lt:
+            if required_key_sr not in weights_dt.keys():
+                raise KeyError(f'Required key "{required_key_sr}" is not in weights_dt')
+        self.ranks_df['weighted_rank'] = (
+            self.ranks_df['scores_rank'] * weights_dt['scores'] +
+            self.ranks_df['pct_diffs_rank'] * weights_dt['pct_diffs'] +
+            self.ranks_df['cnt_examples_rank'] * weights_dt['cnt_examples'])
+        return self
+
+    def get_best_examples(self):
+        '''
+        Gets examples from best iteration
+
+        Returns
+        -------
+        best_examples_ix : pd.Index
+            Best examples.
+
+        '''
+        best_iteration_it = self._get_best_iteration()
+        best_examples_ix = self.results_df.loc[best_iteration_it, 'examples']
+        return best_examples_ix
+
+    def get_best_model(self):
+        '''
+        Gets model from best iteration
+
+        Returns
+        -------
+        best_ccbcv : CatBoostCV
+            Best cross-validated model.
+
+        '''
+        best_iteration_it = self._get_best_iteration()
+        best_ccbcv = self.models_lt[best_iteration_it]
+        return best_ccbcv
+
+    def get_best_inspector(self):
+        '''
+        Gets inspector from best iteration
+
+        Returns
+        -------
+        best_ei : ExampleInspector
+            Best inspector.
+
+        '''
+        best_iteration_it = self._get_best_iteration()
+        best_ei = self.inspectors_lt[best_iteration_it]
+        return best_ei
+
+    def plot_results(self):
+        '''
+        Plots results
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        fig, axes = plt.subplots(nrows=2, sharex=True)
+        columns_lt = ['scores', 'pct_diffs', 'cnt_examples']
+        self.results_df[columns_lt].plot(marker='.', subplots=True, ax=axes)
+        for index_it, column_sr in enumerate(iterable=columns_lt):
+            data_ss = self.results_df[column_sr].describe().round(decimals=3)
+            pd.plotting.table(ax=axes[index_it], data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        fig.tight_layout()
+        return fig
+
+    def plot_ranks(self):
+        '''
+        Plots ranks
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        ax = self.ranks_df.plot(marker='.')
+        for _, column_ss in self.ranks_df.items():
+            ax.scatter(x=column_ss.idxmin(), y=column_ss.min())
+        fig = ax.figure
+        return fig
+
+    def delete_predictions_and_targets(self):
+        '''
+        Deletes predictions and targets
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        for ccbcv in self.models_lt:
+            ccbcv.delete_predictions_and_targets()
+        return self
+
+    def _update_params(
+            self,
+            train_dir_sr: str):
+        '''
+        Updates parameters
+
+        Parameters
+        ----------
+        train_dir_sr : str
+            Train directory.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        self.cat_boost_dt['train_dir'] = train_dir_sr
+        return self
+
+    def _update_best_score_and_iteration(
+            self,
+            score_ft: float,
+            iteration_it: int):
+        '''
+        Updates best score and iteration
+
+        Parameters
+        ----------
+        score_ft : float
+            Current score.
+        iteration_it : int
+            Current iteration.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        if (self.objective_sr == 'minimize') and (score_ft < self.best_score_ft):
+            self.best_score_ft = score_ft
+            self.best_iteration_it = iteration_it
+        elif (self.objective_sr == 'maximize') and (score_ft > self.best_score_ft):
+            self.best_score_ft = score_ft
+            self.best_iteration_it = iteration_it
+        return self
+
+    def _get_examples(
+            self,
+            X: pd.DataFrame,
+            ei: ExampleInspector):
+        '''
+        Gets examples
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        ei : ExampleInspector
+            Inspector.
+
+        Returns
+        -------
+        examples_ix : pd.Index
+            Examples.
+        drop_ix : pd.Index
+            Examples to drop.
+        keep_ix : pd.Index
+            Examples to keep.
+
+        '''
+        examples_ix = X.index
+        drop_ix = (
+            ei.example_importances_df
+            .query(expr='lci > 0')['mean']
+            .nlargest(n=self.example_importances_nlargest_n_it)
+            .index)
+        keep_ix = examples_ix.difference(other=drop_ix)
+        return examples_ix, drop_ix, keep_ix
+
+    def _get_result(
+            self,
+            iteration_it: int,
+            score_ft: float,
+            pct_diff_ft: float,
+            examples_ix: pd.Index,
+            drop_ix: pd.Index,
+            keep_ix: pd.Index):
+        '''
+        Gets result
+
+        Parameters
+        ----------
+        iteration_it : int
+            Current iteration.
+        score_ft : float
+            Current score.
+        pct_diff_ft : float
+            Current percent difference between train and validation eval metrics.
+        examples_ix : pd.Index
+            Examples.
+        drop_ix : pd.Index
+            Examples to drop.
+        keep_ix : pd.Index
+            Examples to keep.
+
+        Returns
+        -------
+        result_dt : dict
+            Result.
+
+        '''
+        result_dt = {
+            'iterations': iteration_it,
+            'scores': score_ft,
+            'pct_diffs': pct_diff_ft,
+            'cnt_examples': examples_ix.shape[0],
+            'cnt_drop': drop_ix.shape[0],
+            'cnt_keep': keep_ix.shape[0],
+            'best_iterations': self.best_iteration_it,
+            'best_scores': self.best_score_ft,
+            'examples': examples_ix}
+        return result_dt
+
+    def _print_result(
+            self,
+            result_dt: dict):
+        '''
+        Prints result
+
+        Parameters
+        ----------
+        result_dt : dict
+            Result.
+
+        Returns
+        -------
+        None.
+
+        '''
+        print('Result:')
+        for key_sr in result_dt.keys():
+            if key_sr != 'examples':
+                print('- {}: {}'.format(key_sr, result_dt[key_sr]))
+
+    def _get_results(
+            self,
+            results_lt: list):
+        '''
+        Gets results
+
+        Parameters
+        ----------
+        results_lt : list
+            Results.
+
+        Returns
+        -------
+        results_df : pd.DataFrame
+            Results.
+
+        '''
+        results_df = pd.DataFrame(data=results_lt).set_index(keys='iterations')
+        return results_df
+
+    def _get_ranks(self):
+        '''
+        Gets ranks
+
+        Returns
+        -------
+        ranks_df : pd.DataFrame
+            Ranks.
+
+        '''
+        ranks_df = (
+            self.results_df[['scores', 'pct_diffs', 'cnt_examples']]
+            .assign(
+                scores = lambda x: x['scores'].rank(pct=True, ascending=False if self.objective_sr == 'maximize' else True),
+                pct_diffs = lambda x: x['pct_diffs'].rank(pct=True),
+                cnt_examples = lambda x: x['cnt_examples'].rank(pct=True),
+                combined = lambda x: x.sum(axis=1))
+            .rename(columns=lambda x: f'{x}_rank'))
+        return ranks_df
+
+    def _get_best_iteration(self):
+        '''
+        Gets best iteration based on combined or weighted rank
+
+        Returns
+        -------
+        best_iteration_it : int
+            Best iteration.
+
+        '''
+        best_iteration_it = self.ranks_df.iloc[:, -1].idxmin()
+        return best_iteration_it
+    
+# =============================================================================
+# FeatureSelector
+# =============================================================================
+
+class FeatureSelector:
+    def __init__(
+            self,
+            model_type_sr: str,
+            cat_boost_dt: dict, 
+            sklearn_splitter, 
+            objective_sr: str, 
+            strategy_sr: str, 
+            wait_it: int):
+        '''
+        Selects features by iteratively removing those with highest validation losses
+
+        Parameters
+        ----------
+        model_type_sr : str
+            Model type.
+        cat_boost_dt : dict
+            Parameters passed to CatBoost.
+        sklearn_splitter : TYPE
+            Splitter from scikit-learn.
+        objective_sr : str
+            Objective for eval metric.
+        strategy_sr : str
+            Strategy for dropping features.
+        wait_it : int
+            Number of iterations to wait before terminating procedure.
+
+
+        Raises
+        ------
+        KeyError
+            Required key "{required_key_sr}" is not in cat_boost_dt.
+        ValueError
+            Permitted values of objective_sr are {permitted_objectives_lt}.
+        NotImplementedError
+            Implemented values of strategy_sr are {implemented_strategies_lt}.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.model_type_sr = model_type_sr
+        required_keys_lt = ['train_dir']
+        for required_key_sr in required_keys_lt:
+            if required_key_sr not in cat_boost_dt.keys():
+                raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
+        self.cat_boost_dt = cat_boost_dt
+        self.sklearn_splitter = sklearn_splitter
+        permitted_objectives_lt = ['minimize', 'maximize']
+        if objective_sr not in permitted_objectives_lt:
+            raise ValueError(f'Permitted values of objective_sr are {permitted_objectives_lt}')
+        self.objective_sr = objective_sr
+        self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
+        self.best_iteration_it = 0
+        implemented_strategies_lt = ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_lowest_mean']
         if strategy_sr not in implemented_strategies_lt:
-            raise NotImplementedError(f'strategy_sr must be one of {implemented_strategies_lt}')
+            raise NotImplementedError(f'Implemented values of strategy_sr are {implemented_strategies_lt}')
         self.strategy_sr = strategy_sr
         self.wait_it = wait_it
         
@@ -963,7 +1519,7 @@ class FeatureSelector:
             X: pd.DataFrame, 
             y: pd.Series):
         '''
-        Iteratively fits models
+        Fits models, stores metadata, and drops features
 
         Parameters
         ----------
@@ -998,7 +1554,7 @@ class FeatureSelector:
             self._update_params(X=X, train_dir_sr=output_subdirectory_sr)
             
             # Fit model
-            ccbcv = CustomCatBoostCV(cat_boost_dt=self.cat_boost_dt, binary_bl=self.binary_bl, sklearn_splitter=self.sklearn_splitter)
+            ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
             ccbcv.fit(X=X, y=y)
             self.models_lt.append(ccbcv)
             
@@ -1010,7 +1566,8 @@ class FeatureSelector:
             features_ix, drop_ix, keep_ix = self._get_features(X=X, ccbcv=ccbcv)
             
             # Get and print result
-            result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, features_ix=features_ix, drop_ix=drop_ix, keep_ix=keep_ix)
+            pct_diff_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'pct_diff']
+            result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, pct_diff_ft=pct_diff_ft, features_ix=features_ix, drop_ix=drop_ix, keep_ix=keep_ix)
             results_lt.append(result_dt)
             self._print_result(result_dt=result_dt)
             
@@ -1030,18 +1587,21 @@ class FeatureSelector:
         self.ranks_df = self._get_ranks()
         return self
 
-    def weight_rank(
+    def weight_ranks(
             self, 
             weights_dt: dict):
         '''
-        Weights score and feature count ranks to arrive at new combined rank
+        Creates new combined rank by weighting components
 
         Parameters
         ----------
         weights_dt : dict
-            Dict with...
-            - Keys of 'scores' and 'cnt_features'
-            - Values corresponding to importances (higher = more important).
+            Weights.
+
+        Raises
+        ------
+        KeyError
+            Required key "{required_key_sr}" is not in weights_dt.
 
         Returns
         -------
@@ -1049,19 +1609,24 @@ class FeatureSelector:
             DESCRIPTION.
 
         '''
+        required_keys_lt = ['scores', 'pct_diffs', 'cnt_features']
+        for required_key_sr in required_keys_lt:
+            if required_key_sr not in weights_dt.keys():
+                raise KeyError(f'Required key "{required_key_sr}" is not in weights_dt')
         self.ranks_df['weighted_rank'] = (
             self.ranks_df['scores_rank'] * weights_dt['scores'] +
+            self.ranks_df['pct_diffs_rank'] * weights_dt['pct_diffs'] +
             self.ranks_df['cnt_features_rank'] * weights_dt['cnt_features'])
         return self
     
     def get_best_features(self):
         '''
-        Gets features from best model according to rank (including weighted if it exists)
+        Gets features from best iteration
 
         Returns
         -------
         best_features_ix : pd.Index
-            Features from best model.
+            Best features.
 
         '''
         best_iteration_it = self._get_best_iteration()
@@ -1070,12 +1635,12 @@ class FeatureSelector:
     
     def get_best_model(self):
         '''
-        Gets best model according to rank (including weighted if it exists)
+        Gets model from best iteration
 
         Returns
         -------
         best_ccbcv : CustomCatBoostCV
-            Best model.
+            Best cross-validated model.
 
         '''
         best_iteration_it = self._get_best_iteration()
@@ -1084,7 +1649,7 @@ class FeatureSelector:
     
     def plot_results(self):
         '''
-        Plots results (original scale)
+        Plots results
 
         Returns
         -------
@@ -1093,16 +1658,17 @@ class FeatureSelector:
 
         '''
         fig, axes = plt.subplots(nrows=2, sharex=True)
-        self.results_df.iloc[:, :2].plot(marker='.', subplots=True, ax=axes)
-        for index_it, ax in enumerate(iterable=axes.ravel()):
-            data_ss = self.results_df.iloc[:, index_it].describe().round(decimals=3)
-            pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        columns_lt = ['scores', 'pct_diffs', 'cnt_features']
+        self.results_df[columns_lt].plot(marker='.', subplots=True, ax=axes)
+        for index_it, column_sr in enumerate(iterable=columns_lt):
+            data_ss = self.results_df[column_sr].describe().round(decimals=3)
+            pd.plotting.table(ax=axes[index_it], data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig.tight_layout()
         return fig
     
     def plot_ranks(self):
         '''
-        Plots ranks (common scale)
+        Plots ranks
 
         Returns
         -------
@@ -1118,7 +1684,7 @@ class FeatureSelector:
     
     def delete_predictions_and_targets(self):
         '''
-        Deletes predictions and targets from all model instances
+        Deletes predictions and targets
 
         Returns
         -------
@@ -1135,14 +1701,14 @@ class FeatureSelector:
             X: pd.DataFrame, 
             train_dir_sr: str):
         '''
-        Updates parameters passed to CustomCatBoostCV
+        Updates parameters
 
         Parameters
         ----------
         X : pd.DataFrame
             Feature matrix.
         train_dir_sr : str
-            Output directory.
+            Train directory.
 
         Returns
         -------
@@ -1163,12 +1729,12 @@ class FeatureSelector:
             score_ft: float, 
             iteration_it: int):
         '''
-        Updates best score and iteration after fitting model
+        Updates best score and iteration
 
         Parameters
         ----------
         score_ft : float
-            Current score on eval metric.
+            Current score.
         iteration_it : int
             Current iteration.
 
@@ -1191,23 +1757,23 @@ class FeatureSelector:
             X: pd.DataFrame, 
             ccbcv: CustomCatBoostCV):
         '''
-        Gets features used in model and those to be dropped and kept based on it
+        Gets features
 
         Parameters
         ----------
         X : pd.DataFrame
             Feature matrix.
         ccbcv : CustomCatBoostCV
-            CV model object.
+            Cross-validated model.
 
         Returns
         -------
         features_ix : pd.Index
-            Features used.
+            Features.
         drop_ix : pd.Index
             Features to drop.
         keep_ix : pd.Index
-            Features to keep.
+            Feature to keep.
 
         '''
         features_ix = X.columns
@@ -1215,7 +1781,7 @@ class FeatureSelector:
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
         elif self.strategy_sr == 'drop_uci_below_zero':
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_uci < 0').index
-        elif self.strategy_sr == 'drop_worst_mean':
+        elif self.strategy_sr == 'drop_lowest_mean':
             drop_ix = pd.Index(data=[ccbcv.lfc_feature_importances_df['validation_mean'].idxmin()])
         keep_ix = features_ix.difference(other=drop_ix)
         return features_ix, drop_ix, keep_ix
@@ -1224,20 +1790,23 @@ class FeatureSelector:
             self, 
             iteration_it: int, 
             score_ft: float, 
+            pct_diff_ft: float,
             features_ix: pd.Index, 
             drop_ix: pd.Index, 
             keep_ix: pd.Index):
         '''
-        Gets current result as dict
+        Gets result
 
         Parameters
         ----------
         iteration_it : int
             Current iteration.
         score_ft : float
-            Current score on eval metric.
+            Current score.
+        pct_diff_ft : float
+            Current percent difference.
         features_ix : pd.Index
-            Features used.
+            Features.
         drop_ix : pd.Index
             Features to drop.
         keep_ix : pd.Index
@@ -1246,12 +1815,13 @@ class FeatureSelector:
         Returns
         -------
         result_dt : dict
-            Current result.
+            Result.
 
         '''
         result_dt = {
             'iterations': iteration_it,
             'scores': score_ft,
+            'pct_diff_ft': pct_diff_ft,
             'cnt_features': features_ix.shape[0],
             'cnt_drop': drop_ix.shape[0],
             'cnt_keep': keep_ix.shape[0],
@@ -1264,12 +1834,12 @@ class FeatureSelector:
             self, 
             result_dt: dict):
         '''
-        Prints current result
+        Prints result
 
         Parameters
         ----------
         result_dt : dict
-            Current result.
+            Result.
 
         Returns
         -------
@@ -1285,17 +1855,17 @@ class FeatureSelector:
             self, 
             results_lt: list):
         '''
-        Gets all results as data frame
+        Gets results
 
         Parameters
         ----------
         results_lt : list
-            Results from all iterations.
+            Results.
 
         Returns
         -------
         results_df : pd.DataFrame
-            Results from all iterations.
+            Results.
 
         '''
         results_df = pd.DataFrame(data=results_lt).set_index(keys='iterations')
@@ -1303,19 +1873,19 @@ class FeatureSelector:
     
     def _get_ranks(self):
         '''
-        Ranks results based on scores and feature counts
+        Gets ranks
 
         Returns
         -------
         ranks_df : pd.DataFrame
-            Ranked results from all iterations.
+            Ranks.
 
         '''
         ranks_df = (
-            self.results_df
-            .iloc[:, :2]
+            self.results_df[['scores', 'pct_diffs', 'cnt_features']]
             .assign(
                 scores = lambda x: x['scores'].rank(pct=True, ascending=False if self.objective_sr == 'maximize' else True),
+                pct_diffs = lambda x: x['pct_diffs'].rank(pct=True),
                 cnt_features = lambda x: x['cnt_features'].rank(pct=True),
                 combined = lambda x: x.sum(axis=1))
             .rename(columns=lambda x: f'{x}_rank'))
@@ -1323,7 +1893,7 @@ class FeatureSelector:
     
     def _get_best_iteration(self):
         '''
-        Gets best iteration according to rank (including weighted if it exists)
+        Gets best iteration
 
         Returns
         -------
