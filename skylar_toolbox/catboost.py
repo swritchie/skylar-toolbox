@@ -546,6 +546,7 @@ class CustomCatBoostCV:
 
             # Fit model
             ccb = CustomCatBoost(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt)
+            self.cat_boost_dt = ccb.cbm.get_params()
             ccb.fit(
                 X_train=X.iloc[train_ay, :],
                 y_train=y.iloc[train_ay], 
@@ -1496,7 +1497,7 @@ class FeatureSelector:
 
         '''
         self.model_type_sr = model_type_sr
-        required_keys_lt = ['cat_features', 'monotone_constraints', 'train_dir']
+        required_keys_lt = ['train_dir']
         for required_key_sr in required_keys_lt:
             if required_key_sr not in cat_boost_dt.keys():
                 raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
