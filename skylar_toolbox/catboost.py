@@ -232,7 +232,7 @@ class CustomCatBoost:
             fig = ax.figure
             return fig
         else:
-            raise NotImplementedError(f'plot_type_sr must be one of {implemented_plot_types_lt}')
+            raise NotImplementedError(f'Implemented values of plot_type_sr are {implemented_plot_types_lt}')
             
     def plot_interaction_strengths(self):
         '''
@@ -582,7 +582,7 @@ class CustomCatBoostCV:
         elif strategy_sr == 'weight_equally':
             self.cbm = cb.sum_models(models=models_lt)
         else:
-            raise NotImplementedError(f'strategy_sr must be one of {implemented_strategies_lt}')
+            raise NotImplementedError(f'Implemented values of strategy_sr are {implemented_strategies_lt}')
         return self
     
     def plot_eval_metrics(self):
@@ -665,7 +665,7 @@ class CustomCatBoostCV:
             fig = ax.figure
             return fig
         else:
-            raise NotImplementedError(f'plot_type_sr must be one of {implemented_plot_types_lt}')
+            raise NotImplementedError(f'Implemented values of plot_type_sr are {implemented_plot_types_lt}')
             
     def delete_predictions_and_targets(self):
         '''
@@ -898,7 +898,7 @@ class ExampleInspector:
             losses_ss = np.abs(ccb.y_train - ccb.y_train_pred).rename(index='losses')
             return losses_ss
         else:
-            raise NotImplementedError(f'loss_function_sr must be one of {implemented_loss_functions_lt}')
+            raise NotImplementedError(f'Implemented values of loss_function_sr are {implemented_loss_functions_lt}')
     
     def _get_example_importances(
             self, 
