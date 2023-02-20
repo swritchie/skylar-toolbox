@@ -42,13 +42,10 @@ class CustomCatBoost:
         None.
 
         '''
-        # model_type_sr
         implemented_model_types_lt = ['classification', 'regression']
         if model_type_sr not in implemented_model_types_lt:
             raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
         self.model_type_sr = model_type_sr
-
-        # cat_boost_dt
         required_keys_lt = ['train_dir']
         for required_key_sr in required_keys_lt:
              if required_key_sr not in cat_boost_dt.keys():
@@ -476,20 +473,15 @@ class CustomCatBoostCV:
         None.
 
         '''        
-        # model_type_sr
         implemented_model_types_lt = ['classification', 'regression']
         if model_type_sr not in implemented_model_types_lt:
             raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
         self.model_type_sr = model_type_sr
-
-        # cat_boost_dt
         required_keys_lt = ['train_dir']
         for required_key_sr in required_keys_lt:
              if required_key_sr not in cat_boost_dt.keys():
                  raise KeyError(f'Required key "{required_key_sr}" is not in cat_boost_dt')
         self.cat_boost_dt = get_parameters(model_type_sr=model_type_sr, cat_boost_dt=cat_boost_dt)
-        
-        # sklearn_splitter
         self.sklearn_splitter = sklearn_splitter
         
     def fit(
@@ -1809,7 +1801,7 @@ class FeatureSelector:
         result_dt = {
             'iterations': iteration_it,
             'scores': score_ft,
-            'pct_diff_ft': pct_diff_ft,
+            'pct_diffs': pct_diff_ft,
             'cnt_features': features_ix.shape[0],
             'cnt_drop': drop_ix.shape[0],
             'cnt_keep': keep_ix.shape[0],
