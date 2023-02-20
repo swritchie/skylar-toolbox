@@ -931,10 +931,10 @@ class FeatureSelector:
         objective_sr : str
             One of ['minimize', 'maximize'].
         strategy_sr : str
-            How features should be dropped. Must be one of ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_worst_mean'] for removing...
+            How features should be dropped. Must be one of ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_lowest_mean'] for removing...
             - Either all features with mean LFC <= 0
             - Or all features with UCI < 0
-            - Or worst feature by mean LFC.
+            - Or lowest feature by mean LFC.
         wait_it : int
             Iterations to wait before stopping procedure.
 
@@ -952,7 +952,7 @@ class FeatureSelector:
         self.objective_sr = objective_sr
         self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
         self.best_iteration_it = 0
-        implemented_strategies_lt = ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_worst_mean']
+        implemented_strategies_lt = ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_lowest_mean']
         if strategy_sr not in implemented_strategies_lt:
             raise NotImplementedError(f'strategy_sr must be one of {implemented_strategies_lt}')
         self.strategy_sr = strategy_sr
@@ -1215,7 +1215,7 @@ class FeatureSelector:
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
         elif self.strategy_sr == 'drop_uci_below_zero':
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_uci < 0').index
-        elif self.strategy_sr == 'drop_worst_mean':
+        elif self.strategy_sr == 'drop_lowest_mean':
             drop_ix = pd.Index(data=[ccbcv.lfc_feature_importances_df['validation_mean'].idxmin()])
         keep_ix = features_ix.difference(other=drop_ix)
         return features_ix, drop_ix, keep_ix
