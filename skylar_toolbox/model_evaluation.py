@@ -256,9 +256,9 @@ class ClassificationEvaluator:
             Predicted probabilities.
 
         '''
-        y_pred = pd.Series(data=self.estimator.predict(X=X), index=X.index, name='predictions')
+        y_pred = pd.Series(data=self.estimator.predict(X), index=X.index, name='predictions')
         y_pred_proba = pd.Series(
-            data=self.estimator.predict_proba(X=X)[:, 1], index=X.index, name='predictions')
+            data=self.estimator.predict_proba(X)[:, 1], index=X.index, name='predictions')
         return y_pred, y_pred_proba
         
     def _get_eval_metrics(
@@ -477,7 +477,7 @@ class RegressionEvaluator:
             Predictions.
 
         '''
-        y_pred = pd.Series(data=self.estimator.predict(X=X), index=X.index, name='predictions')
+        y_pred = pd.Series(data=self.estimator.predict(X), index=X.index, name='predictions')
         return y_pred
     
     def _get_eval_metrics(
