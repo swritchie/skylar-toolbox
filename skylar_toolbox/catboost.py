@@ -178,8 +178,9 @@ class CustomCatBoost:
             raise ValueError(f'Permitted values of importance_type_sr are {permitted_importance_types_lt}')
         implemented_plot_types_lt = ['all', 'top_bottom', 'abs_diff', 'pct_diff']
         if plot_type_sr == 'all':
-            plot_df = feature_importances_df[['learn', 'validation']]
-            data_df = plot_df.describe().round(decimals=3)
+            columns_lt = ['learn', 'validation', 'pct_diff']
+            plot_df = feature_importances_df[columns_lt[:-1]]
+            data_df = feature_importances_df[columns_lt].describe().round(decimals=3)
             ax = plot_df.plot()
             ax.set(xticks=[])
             ax.axhline(y=0, c='k', ls=':')
