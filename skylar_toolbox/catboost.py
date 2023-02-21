@@ -570,12 +570,11 @@ class CustomCatBoostCV:
         implemented_strategies_lt = ['weight_by_score', 'weight_equally']
         if strategy_sr == 'weight_by_score':
             weights_lt = self.eval_metrics_df.filter(regex='validation_\d').loc[self.cat_boost_dt['eval_metric'], :].tolist()
-            self.cbm = cb.sum_models(models=models_lt, weights=weights_lt)
+            return cb.sum_models(models=models_lt, weights=weights_lt)
         elif strategy_sr == 'weight_equally':
-            self.cbm = cb.sum_models(models=models_lt)
+            return cb.sum_models(models=models_lt)
         else:
             raise NotImplementedError(f'Implemented values of strategy_sr are {implemented_strategies_lt}')
-        return self
     
     def plot_eval_metrics(self):
         '''
