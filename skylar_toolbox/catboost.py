@@ -135,8 +135,8 @@ class CustomCatBoost:
 
         '''
         columns_lt = ['learn', 'validation', 'pct_diff']
-        plot_df = self.eval_metrics[columns_lt[:-1]]
-        data_df = self.eval_metrics[columns_lt].round(decimals=3)
+        plot_df = self.eval_metrics_df[columns_lt[:-1]]
+        data_df = self.eval_metrics_df[columns_lt].round(decimals=3)
         ax = plot_df.plot(kind='bar')
         pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
         fig = ax.figure
