@@ -135,8 +135,8 @@ class CustomCatBoost:
 
         '''
         columns_lt = ['learn', 'validation', 'pct_diff']
-        plot_df = self.eval_metrics[columns_lt[:-1]]
-        data_df = self.eval_metrics[columns_lt].round(decimals=3)
+        plot_df = self.eval_metrics_df[columns_lt[:-1]]
+        data_df = self.eval_metrics_df[columns_lt].round(decimals=3)
         ax = plot_df.plot(kind='bar')
         pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
         fig = ax.figure
@@ -178,8 +178,9 @@ class CustomCatBoost:
             raise ValueError(f'Permitted values of importance_type_sr are {permitted_importance_types_lt}')
         implemented_plot_types_lt = ['all', 'top_bottom', 'abs_diff', 'pct_diff']
         if plot_type_sr == 'all':
-            plot_df = feature_importances_df[['learn', 'validation']]
-            data_df = plot_df.describe().round(decimals=3)
+            columns_lt = ['learn', 'validation', 'pct_diff']
+            plot_df = feature_importances_df[columns_lt[:-1]]
+            data_df = feature_importances_df[columns_lt].describe().round(decimals=3)
             ax = plot_df.plot()
             ax.set(xticks=[])
             ax.axhline(y=0, c='k', ls=':')
@@ -569,12 +570,11 @@ class CustomCatBoostCV:
         implemented_strategies_lt = ['weight_by_score', 'weight_equally']
         if strategy_sr == 'weight_by_score':
             weights_lt = self.eval_metrics_df.filter(regex='validation_\d').loc[self.cat_boost_dt['eval_metric'], :].tolist()
-            self.cbm = cb.sum_models(models=models_lt, weights=weights_lt)
+            return cb.sum_models(models=models_lt, weights=weights_lt)
         elif strategy_sr == 'weight_equally':
-            self.cbm = cb.sum_models(models=models_lt)
+            return cb.sum_models(models=models_lt)
         else:
             raise NotImplementedError(f'Implemented values of strategy_sr are {implemented_strategies_lt}')
-        return self
     
     def plot_eval_metrics(self):
         '''
@@ -587,7 +587,7 @@ class CustomCatBoostCV:
 
         '''
         # Get data frames
-        ys_df = self.eval_metrics_df.filter(like='mean').rename(columns=lambda x: x.split('_')[0])
+        ys_df = self.eval_metrics_df.filter(like='_mean').rename(columns=lambda x: x.split('_')[0])
         yerrs_df = self.eval_metrics_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
         data_df = self.eval_metrics_df[['learn_mean', 'validation_mean', 'pct_diff']].round(decimals=3)
         # Plot
@@ -630,11 +630,11 @@ class CustomCatBoostCV:
             feature_importances_df = self.pvc_feature_importances_df
         else:
             raise ValueError(f'Permitted values of importance_type_sr are {permitted_importance_types_lt}')
-        xs_df = ys_df = feature_importances_df.filter(like='mean').rename(columns=lambda x: x.split('_')[0])
+        xs_df = ys_df = feature_importances_df.filter(like='_mean').rename(columns=lambda x: x.split('_')[0])
         xerrs_df = yerrs_df = feature_importances_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
-        data_df = ys_df.describe().round(decimals=3)
-        implemented_plot_types_lt = ['all', 'top_bottom', 'abs_diff', 'pct_diff']
+        implemented_plot_types_lt = ['all', 'top_bottom']
         if plot_type_sr == 'all':
+            data_df = ys_df.describe().round(decimals=3)
             ax = ys_df.plot(yerr=yerrs_df)
             ax.set(xticks=[])
             pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
@@ -650,17 +650,6 @@ class CustomCatBoostCV:
                 axes[index_it].axvline(x=0, c='k', ls=':')
                 axes[index_it].set(title=split_sr)
             fig.tight_layout()
-            return fig
-        elif plot_type_sr in ['abs_diff', 'pct_diff']:
-            top_bottom_df = feature_importances_df.nlargest(n=10, columns=plot_type_sr) if plot_type_sr == 'abs_diff' \
-                else feature_importances_df.nsmallest(n=10, columns=plot_type_sr)
-            ax = (
-                top_bottom_df
-                .sort_values(by=plot_type_sr, ascending=True if plot_type_sr == 'abs_diff' else False)
-                .loc[:, ['learn', 'validation']]
-                .plot(kind='barh'))
-            ax.axvline(x=0, c='k', ls=':')
-            fig = ax.figure
             return fig
         else:
             raise NotImplementedError(f'Implemented values of plot_type_sr are {implemented_plot_types_lt}')
@@ -1192,7 +1181,7 @@ class ExampleSelector:
 
         '''
         columns_lt = ['scores', 'pct_diffs', 'cnt_examples']
-        fig, axes = plt.subplots(nrows=len(columns_lt), sharex=True)
+        fig, axes = plt.subplots(nrows=len(columns_lt), sharex=True, figsize=(10, 10))
         self.results_df[columns_lt].plot(marker='.', subplots=True, ax=axes)
         for index_it, column_sr in enumerate(iterable=columns_lt):
             data_ss = self.results_df[column_sr].describe().round(decimals=3)
@@ -1638,7 +1627,7 @@ class FeatureSelector:
 
         '''
         columns_lt = ['scores', 'pct_diffs', 'cnt_features']
-        fig, axes = plt.subplots(nrows=len(columns_lt), sharex=True)
+        fig, axes = plt.subplots(nrows=len(columns_lt), sharex=True, figsize=(10, 10))
         self.results_df[columns_lt].plot(marker='.', subplots=True, ax=axes)
         for index_it, column_sr in enumerate(iterable=columns_lt):
             data_ss = self.results_df[column_sr].describe().round(decimals=3)
