@@ -587,7 +587,7 @@ class CustomCatBoostCV:
 
         '''
         # Get data frames
-        ys_df = self.eval_metrics_df.filter(like='mean').rename(columns=lambda x: x.split('_')[0])
+        ys_df = self.eval_metrics_df.filter(like='_mean').rename(columns=lambda x: x.split('_')[0])
         yerrs_df = self.eval_metrics_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
         data_df = self.eval_metrics_df[['learn_mean', 'validation_mean', 'pct_diff']].round(decimals=3)
         # Plot
