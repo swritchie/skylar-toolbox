@@ -630,11 +630,11 @@ class CustomCatBoostCV:
             feature_importances_df = self.pvc_feature_importances_df
         else:
             raise ValueError(f'Permitted values of importance_type_sr are {permitted_importance_types_lt}')
-        xs_df = ys_df = feature_importances_df.filter(like='mean').rename(columns=lambda x: x.split('_')[0])
+        xs_df = ys_df = feature_importances_df.filter(like='_mean').rename(columns=lambda x: x.split('_')[0])
         xerrs_df = yerrs_df = feature_importances_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
-        data_df = ys_df.describe().round(decimals=3)
-        implemented_plot_types_lt = ['all', 'top_bottom', 'abs_diff', 'pct_diff']
+        implemented_plot_types_lt = ['all', 'top_bottom']
         if plot_type_sr == 'all':
+            data_df = ys_df.describe().round(decimals=3)
             ax = ys_df.plot(yerr=yerrs_df)
             ax.set(xticks=[])
             pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
@@ -650,17 +650,6 @@ class CustomCatBoostCV:
                 axes[index_it].axvline(x=0, c='k', ls=':')
                 axes[index_it].set(title=split_sr)
             fig.tight_layout()
-            return fig
-        elif plot_type_sr in ['abs_diff', 'pct_diff']:
-            top_bottom_df = feature_importances_df.nlargest(n=10, columns=plot_type_sr) if plot_type_sr == 'abs_diff' \
-                else feature_importances_df.nsmallest(n=10, columns=plot_type_sr)
-            ax = (
-                top_bottom_df
-                .sort_values(by=plot_type_sr, ascending=True if plot_type_sr == 'abs_diff' else False)
-                .loc[:, ['learn', 'validation']]
-                .plot(kind='barh'))
-            ax.axvline(x=0, c='k', ls=':')
-            fig = ax.figure
             return fig
         else:
             raise NotImplementedError(f'Implemented values of plot_type_sr are {implemented_plot_types_lt}')
