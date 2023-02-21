@@ -1181,7 +1181,7 @@ class ExampleSelector:
 
         '''
         columns_lt = ['scores', 'pct_diffs', 'cnt_examples']
-        fig, axes = plt.subplots(nrows=len(columns_lt), sharex=True)
+        fig, axes = plt.subplots(nrows=len(columns_lt), sharex=True, figsize=(10, 10))
         self.results_df[columns_lt].plot(marker='.', subplots=True, ax=axes)
         for index_it, column_sr in enumerate(iterable=columns_lt):
             data_ss = self.results_df[column_sr].describe().round(decimals=3)
@@ -1627,7 +1627,7 @@ class FeatureSelector:
 
         '''
         columns_lt = ['scores', 'pct_diffs', 'cnt_features']
-        fig, axes = plt.subplots(nrows=len(columns_lt), sharex=True)
+        fig, axes = plt.subplots(nrows=len(columns_lt), sharex=True, figsize=(10, 10))
         self.results_df[columns_lt].plot(marker='.', subplots=True, ax=axes)
         for index_it, column_sr in enumerate(iterable=columns_lt):
             data_ss = self.results_df[column_sr].describe().round(decimals=3)
