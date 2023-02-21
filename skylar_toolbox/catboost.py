@@ -240,7 +240,7 @@ class CustomCatBoost:
             Figure.
 
         '''
-        fig, axes = plt.subplots(nrows=2, sharex=True, figsize=(10, 5))
+        fig, axes = plt.subplots(nrows=2, sharex=True, figsize=(15, 10))
         for split_sr, ax in zip(['learn', 'validation'], axes.ravel()):
             y_true = self.y_train if split_sr == 'learn' else self.y_valid
             y_pred = self.y_train_pred if split_sr == 'learn' else self.y_valid_pred
