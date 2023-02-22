@@ -114,12 +114,12 @@ class CustomSKLearn:
             'output_path': f's3://{default_bucket_sr}/{base_job_name_sr}',
             'base_job_name': base_job_name_sr,
             'sagemaker_session': None if local_mode_bl else sagemaker_sn,
-            'metric_definitions': [{'Name': 'Score', 'Regex': 'Score: ([-]?[0-9\\.]+)'}],
-            'use_spot_instances': use_spot_instances_bl if not local_mode_bl else False,
-            'max_wait': 1 * 60 * 60, # Time in seconds: hours x minutes/hour x seconds/minute
-        }
+            'metric_definitions': [{'Name': 'Score', 'Regex': 'Score: ([-]?[0-9\\.]+)'}]}
         if not local_mode_bl:
             defaults_dt['disable_profiler'] = True
+            defaults_dt['use_spot_instances'] = use_spot_instances_bl
+        if defaults_dt['use_spot_instances']:
+            defaults_dt['max_wait'] = 1 * 60 * 60 # Time in seconds: hours x minutes/hour x seconds/minute
         defaults_dt.update(init_dt)
         self.init_dt = defaults_dt
         self.skl = srsn.SKLearn(**self.init_dt)
