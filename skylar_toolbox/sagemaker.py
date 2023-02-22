@@ -12,11 +12,32 @@ from sagemaker import sklearn as srsn
 class CustomHyperparameterTuner:
     def __init__(
             self, 
-            estimator, 
-            hyperparameter_ranges_dt, 
-            objective_type_sr, 
-            source_directory_sr, 
-            init_dt):
+            estimator: sagemaker.EstimatorBase, 
+            hyperparameter_ranges_dt: dict, 
+            objective_type_sr: str, 
+            source_directory_sr: str, 
+            init_dt: dict = dict()):
+        '''
+        Wraps sagemaker.HyperparameterTuner to provide defaults
+
+        Parameters
+        ----------
+        estimator : sagemaker.EstimatorBase
+            Estimator.
+        hyperparameter_ranges_dt : dict
+            Hyperparameter ranges.
+        objective_type_sr : str
+            Objective type.
+        source_directory_sr : str
+            Directory with source code (and optionally requirements file).
+        init_dt : dict, optional
+            Additional arguments passed to sagemaker.HyperparameterTuner(). The default is dict().
+
+        Returns
+        -------
+        None.
+
+        '''
         defaults_dt = {
             'estimator': estimator,
             'objective_metric_name': 'Score',
