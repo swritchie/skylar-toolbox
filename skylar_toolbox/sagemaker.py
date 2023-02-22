@@ -12,7 +12,7 @@ from sagemaker import sklearn as srsn
 class CustomHyperparameterTuner:
     def __init__(
             self, 
-            estimator: sagemaker.EstimatorBase, 
+            estimator: sagemaker.estimator.EstimatorBase, 
             hyperparameter_ranges_dt: dict, 
             objective_type_sr: str, 
             source_directory_sr: str, 
@@ -22,7 +22,7 @@ class CustomHyperparameterTuner:
 
         Parameters
         ----------
-        estimator : sagemaker.EstimatorBase
+        estimator : sagemaker.estimator.EstimatorBase
             Estimator.
         hyperparameter_ranges_dt : dict
             Hyperparameter ranges.
