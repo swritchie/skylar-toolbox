@@ -12,11 +12,32 @@ from sagemaker import sklearn as srsn
 class CustomHyperparameterTuner:
     def __init__(
             self, 
-            estimator, 
-            hyperparameter_ranges_dt, 
-            objective_type_sr, 
-            source_directory_sr, 
-            init_dt):
+            estimator: sagemaker.EstimatorBase, 
+            hyperparameter_ranges_dt: dict, 
+            objective_type_sr: str, 
+            source_directory_sr: str, 
+            init_dt: dict = dict()):
+        '''
+        Wraps sagemaker.HyperparameterTuner to provide defaults
+
+        Parameters
+        ----------
+        estimator : sagemaker.EstimatorBase
+            Estimator.
+        hyperparameter_ranges_dt : dict
+            Hyperparameter ranges.
+        objective_type_sr : str
+            Objective type.
+        source_directory_sr : str
+            Directory with source code (and optionally requirements file).
+        init_dt : dict, optional
+            Additional arguments passed to sagemaker.HyperparameterTuner(). The default is dict().
+
+        Returns
+        -------
+        None.
+
+        '''
         defaults_dt = {
             'estimator': estimator,
             'objective_metric_name': 'Score',
@@ -118,7 +139,7 @@ class CustomSKLearn:
         if not local_mode_bl:
             defaults_dt['disable_profiler'] = True
             defaults_dt['use_spot_instances'] = use_spot_instances_bl
-        if defaults_dt['use_spot_instances']:
+        if defaults_dt.get('use_spot_instances'):
             defaults_dt['max_wait'] = 1 * 60 * 60 # Time in seconds: hours x minutes/hour x seconds/minute
         defaults_dt.update(init_dt)
         self.init_dt = defaults_dt
