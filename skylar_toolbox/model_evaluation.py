@@ -110,7 +110,7 @@ class ClassificationEvaluator:
         plot_df = self.eval_metrics_df[columns_lt[:-1]]
         data_df = self.eval_metrics_df[columns_lt].round(decimals=3)
         ax = plot_df.plot(kind='bar')
-        pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
+        pd.plotting.table(ax=ax, data=data_df, bbox=[1.5, 0, 0.5, 1])
         fig = ax.figure
         return fig
     
@@ -442,7 +442,7 @@ class RegressionEvaluator:
         plot_df = self.eval_metrics_df[columns_lt[:-1]]
         data_df = self.eval_metrics_df[columns_lt].round(decimals=3)
         ax = plot_df.plot(kind='bar')
-        pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
+        pd.plotting.table(ax=ax, data=data_df, bbox=[1.5, 0, 0.5, 1])
         fig = ax.figure
         return fig
     
