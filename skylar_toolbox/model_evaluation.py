@@ -316,7 +316,7 @@ class ClassificationEvaluator:
 
         '''
         eval_metrics_dt = {
-            split_sr: self._get_scores(X=X, y=y) 
+            split_sr: self._get_eval_metrics(X=X, y=y) 
             for split_sr, X, y 
             in [('train', X_train, self.y_train), ('test', X_test, self.y_test)]}
         eval_metrics_df = steda.get_differences(df=pd.DataFrame(data=eval_metrics_dt), columns_lt=['train', 'test'])
@@ -535,7 +535,7 @@ class RegressionEvaluator:
 
         '''
         eval_metrics_dt = {
-            split_sr: self._get_scores(X=X, y=y) 
+            split_sr: self._get_eval_metrics(X=X, y=y) 
             for split_sr, X, y 
             in [('train', X_train, self.y_train), ('test', X_test, self.y_test)]}
         eval_metrics_df = steda.get_differences(df=pd.DataFrame(data=eval_metrics_dt), columns_lt=['train', 'test'])
