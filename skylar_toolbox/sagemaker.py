@@ -6,10 +6,61 @@ import sagemaker
 from sagemaker import sklearn as srsn
 
 # =============================================================================
-# SKLearn
+# CustomHyperparameterTuner
 # =============================================================================
 
-class SKLearn:
+class CustomHyperparameterTuner:
+    def __init__(
+            self, 
+            estimator, 
+            hyperparameter_ranges_dt, 
+            objective_type_sr, 
+            source_directory_sr, 
+            init_dt):
+        defaults_dt = {
+            'estimator': estimator,
+            'objective_metric_name': 'Score',
+            'hyperparameter_ranges': hyperparameter_ranges_dt,
+            'metric_definitions': [{'Name': 'Score', 'Regex': 'Score: ([-]?[0-9\\.]+)'}],
+            'strategy': 'Bayesian',
+            'objective_type': objective_type_sr,
+            'max_jobs': 10,
+            'max_parallel_jobs': 1,
+            'base_tuning_job_name': source_directory_sr.replace('_', '-')[:30],
+            'random_seed': 0,
+            }
+        defaults_dt.update(init_dt)
+        self.init_dt = defaults_dt
+        self.ht = sagemaker.HyperparameterTuner(**self.init_dt)
+        
+    def fit(
+            self, 
+            inputs_dt: dict, 
+            fit_dt: dict = dict()):
+        '''
+        Fits tuner
+
+        Parameters
+        ----------
+        inputs_dt : dict
+            Inputs.
+        fit_dt : dict, optional
+            Additional arguments passed to sagemaker.HyperparameterTuner.fit(). The default is dict().
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        self.ht.fit(inputs=inputs_dt, **fit_dt)
+        return self
+
+# =============================================================================
+# CustomSKLearn
+# =============================================================================
+
+class CustomSKLearn:
     def __init__(
             self, 
             source_directory_sr: str, 
