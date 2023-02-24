@@ -3,6 +3,7 @@
 # =============================================================================
 
 import sagemaker
+import seaborn as sns
 from sagemaker import sklearn as srsn
 
 # =============================================================================
@@ -15,6 +16,8 @@ class CustomHyperparameterTuner:
             estimator: sagemaker.estimator.EstimatorBase, 
             hyperparameter_ranges_dt: dict, 
             objective_type_sr: str, 
+            max_jobs_it: int,
+            max_parallel_jobs_it: int,
             source_directory_sr: str, 
             init_dt: dict = dict()):
         '''
@@ -28,6 +31,10 @@ class CustomHyperparameterTuner:
             Hyperparameter ranges.
         objective_type_sr : str
             Objective type.
+        max_jobs_it : int
+            Max jobs.
+        max_parallel_jobs_it : int
+            Max parallel jobs.
         source_directory_sr : str
             Directory with source code (and optionally requirements file).
         init_dt : dict, optional
@@ -38,6 +45,7 @@ class CustomHyperparameterTuner:
         None.
 
         '''
+        self.hyperparameters_lt = list(hyperparameter_ranges_dt.keys())
         defaults_dt = {
             'estimator': estimator,
             'objective_metric_name': 'Score',
@@ -45,8 +53,8 @@ class CustomHyperparameterTuner:
             'metric_definitions': [{'Name': 'Score', 'Regex': 'Score: ([-]?[0-9\\.]+)'}],
             'strategy': 'Bayesian',
             'objective_type': objective_type_sr,
-            'max_jobs': 10,
-            'max_parallel_jobs': 1,
+            'max_jobs': max_jobs_it,
+            'max_parallel_jobs': max_parallel_jobs_it,
             'base_tuning_job_name': source_directory_sr.replace('_', '-')[:30]}
         defaults_dt.update(init_dt)
         self.init_dt = defaults_dt
@@ -73,8 +81,38 @@ class CustomHyperparameterTuner:
 
         '''
         self.ht.fit(inputs=inputs_dt, **fit_dt)
+        self.tuning_job_name_sr = self.ht.latest_tuning_job.job_name
+        htja = sagemaker.tuner.HyperparameterTuningJobAnalytics(hyperparameter_tuning_job_name=self.tuning_job_name_sr)
+        self.htja_dt = htja.description()
+        self.htja_df = htja.dataframe()
+        self.best_training_job_name_sr = self.ht.best_training_job()
         return self
+    
+    def plot(
+            self, 
+            xvars_lt: list = None):
+        '''
+        Plot objective metric v. hyperparameters
 
+        Parameters
+        ----------
+        xvars_lt : list, optional
+            Hyperparameters to plot. The default is None, which plots all of them.
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        pg = sns.pairplot(
+            data=self.htja_df, 
+            x_vars=xvars_lt if xvars_lt else self.hyperparameters_lt, 
+            y_vars=['FinalObjectiveValue'])
+        pg.map(func=sns.regplot, order=2)
+        fig = pg.fig
+        return fig
+        
 # =============================================================================
 # CustomSKLearn
 # =============================================================================
