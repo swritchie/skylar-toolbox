@@ -47,9 +47,7 @@ class CustomHyperparameterTuner:
             'objective_type': objective_type_sr,
             'max_jobs': 10,
             'max_parallel_jobs': 1,
-            'base_tuning_job_name': source_directory_sr.replace('_', '-')[:30],
-            'random_seed': 0,
-            }
+            'base_tuning_job_name': source_directory_sr.replace('_', '-')[:30]}
         defaults_dt.update(init_dt)
         self.init_dt = defaults_dt
         self.ht = sagemaker.tuner.HyperparameterTuner(**self.init_dt)
