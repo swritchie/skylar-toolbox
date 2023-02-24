@@ -31,7 +31,7 @@ class CustomHyperparameterTuner:
         source_directory_sr : str
             Directory with source code (and optionally requirements file).
         init_dt : dict, optional
-            Additional arguments passed to sagemaker.HyperparameterTuner(). The default is dict().
+            Additional arguments passed to sagemaker.tuner.HyperparameterTuner(). The default is dict().
 
         Returns
         -------
@@ -52,7 +52,7 @@ class CustomHyperparameterTuner:
             }
         defaults_dt.update(init_dt)
         self.init_dt = defaults_dt
-        self.ht = sagemaker.HyperparameterTuner(**self.init_dt)
+        self.ht = sagemaker.tuner.HyperparameterTuner(**self.init_dt)
         
     def fit(
             self, 
@@ -66,7 +66,7 @@ class CustomHyperparameterTuner:
         inputs_dt : dict
             Inputs.
         fit_dt : dict, optional
-            Additional arguments passed to sagemaker.HyperparameterTuner.fit(). The default is dict().
+            Additional arguments passed to sagemaker.tuner.HyperparameterTuner.fit(). The default is dict().
 
         Returns
         -------
