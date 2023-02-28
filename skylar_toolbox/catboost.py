@@ -33,9 +33,9 @@ class CustomCatBoost:
         Raises
         ------
         NotImplementedError
-            Implemented values of model_type_sr are {implemented_model_types_lt}.
+            Implemented values of model_type_sr are  ['classification', 'regression']
         KeyError
-            Required key "{required_key_sr}" is not in cat_boost_dt.
+            Required key "['train_dir']" is not in cat_boost_dt.
 
         Returns
         -------
@@ -159,9 +159,9 @@ class CustomCatBoost:
         Raises
         ------
         ValueError
-            Permitted values of importance_type_sr are {permitted_importance_types_lt}.
+            Permitted values of importance_type_sr are ['LossFunctionChange', 'PredictionValuesChange']
         NotImplementedError
-            Implemented values of plot_type_sr are {implemented_plot_types_lt}.
+            Implemented values of plot_type_sr are ['all', 'top_bottom', 'abs_diff', 'pct_diff']
 
         Returns
         -------
@@ -465,9 +465,9 @@ class CustomCatBoostCV:
         Raises
         ------
         NotImplementedError
-            Implemented values of model_type_sr are {implemented_model_types_lt}.
+            Implemented values of model_type_sr are ['classification', 'regression']
         KeyError
-            Required key "{required_key_sr}" is not in cat_boost_dt.
+            Required key "['train_dir']" is not in cat_boost_dt.
 
         Returns
         -------
@@ -558,7 +558,7 @@ class CustomCatBoostCV:
         Raises
         ------
         NotImplementedError
-            Implemented values of strategy_sr are {implemented_strategies_lt}.
+            Implemented values of strategy_sr are ['weight_by_score', 'weight_equally']
 
         Returns
         -------
@@ -613,9 +613,9 @@ class CustomCatBoostCV:
         Raises
         ------
         ValueError
-            Permitted values of importance_type_sr are {permitted_importance_types_lt}.
+            Permitted values of importance_type_sr are ['LossFunctionChange', 'PredictionValuesChange']
         NotImplementedError
-            Implemented values of plot_type_sr are {implemented_plot_types_lt}.
+            Implemented values of plot_type_sr are ['all', 'top_bottom']
 
         Returns
         -------
@@ -859,7 +859,7 @@ class ExampleInspector:
         Raises
         ------
         NotImplementedError
-            Implemented values of loss_function_sr are {implemented_loss_functions_lt}.
+            Implemented values of loss_function_sr are ['Logloss', 'RMSE', 'MAE']
 
         Returns
         -------
@@ -990,9 +990,9 @@ class ExampleSelector:
         Raises
         ------
         KeyError
-            Required key "{required_key_sr}" is not in cat_boost_dt.
+            Required key "['train_dir']" is not in cat_boost_dt.
         ValueError
-            Permitted values of objective_sr are {permitted_objectives_lt}.
+            Permitted values of objective_sr are ['minimize', 'maximize']
 
         Returns
         -------
@@ -1110,7 +1110,7 @@ class ExampleSelector:
         Raises
         ------
         KeyError
-            Required key "{required_key_sr}" is not in weights_dt.
+            Required key "['scores', 'pct_diffs', 'cnt_examples']" is not in weights_dt.
 
         Returns
         -------
@@ -1453,11 +1453,11 @@ class FeatureSelector:
         Raises
         ------
         KeyError
-            Required key "{required_key_sr}" is not in cat_boost_dt.
+            Required key "['train_dir']" is not in cat_boost_dt.
         ValueError
-            Permitted values of objective_sr are {permitted_objectives_lt}.
+            Permitted values of objective_sr are ['minimize', 'maximize']
         NotImplementedError
-            Implemented values of strategy_sr are {implemented_strategies_lt}.
+            Implemented values of strategy_sr are ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_lowest_mean']
 
         Returns
         -------
@@ -1570,7 +1570,7 @@ class FeatureSelector:
         Raises
         ------
         KeyError
-            Required key "{required_key_sr}" is not in weights_dt.
+            Required key "['scores', 'pct_diffs', 'cnt_features']" is not in weights_dt.
 
         Returns
         -------
@@ -1893,7 +1893,7 @@ def get_parameters(
     Raises
     ------
     NotImplementedError
-        Implemented values of model_type_sr are {implemented_model_types_lt}.
+        Implemented values of model_type_sr are ['classification', 'regression']
 
     Returns
     -------
