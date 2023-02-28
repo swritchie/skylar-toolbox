@@ -925,7 +925,7 @@ class ExampleInspector:
             pool=cb.Pool(data=X.loc[largest_losses_ix, :], label=y.loc[largest_losses_ix], **pool_dt),
             train_pool=cb.Pool(data=X.loc[train_ix, :], label=y.loc[train_ix], **pool_dt), 
             verbose=train_ix.shape[0] // 10)
-        example_importances_ss = pd.Series(data=scores_lt, index=train_ix.iloc[indices_lt], name='importances')
+        example_importances_ss = pd.Series(data=scores_lt, index=train_ix[indices_lt], name='importances')
         return example_importances_ss
     
     def _compare_example_importances(
