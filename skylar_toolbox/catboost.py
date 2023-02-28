@@ -789,8 +789,9 @@ class ExampleInspector:
             losses_ss = self._get_losses(ccb=ccb)
             losses_lt.append(losses_ss)
             
-            # Get largest
-            largest_losses_ss = losses_ss.nlargest(n=self.losses_nlargest_n_it)
+            # Get largest validation losses
+            valid_ix = ccb.y_valid.index
+            largest_losses_ss = losses_ss.loc[valid_ix].nlargest(n=self.losses_nlargest_n_it)
             
             # Get example importances
             example_importances_ss = self._get_example_importances(largest_losses_ss=largest_losses_ss, ccb=ccb, X=X, y=y)
