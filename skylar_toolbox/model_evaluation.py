@@ -216,7 +216,7 @@ class ClassificationEvaluator:
     
     def plot_calibration(
             self,
-            from_predictions_dt: dict = dict()):
+            from_predictions_dt: dict = dict(n_bins=10)):
         '''
         Plots calibration
 
