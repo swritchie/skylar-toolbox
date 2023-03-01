@@ -59,8 +59,8 @@ class ClassificationEvaluator:
 
         '''
         # Get predictions
-        self.y_train_pred, self.y_train_pred_proba = self._get_predictions(X=X_train)
-        self.y_test_pred, self.y_test_pred_proba = self._get_predictions(X=X_test)
+        self.y_train_pred, self.y_train_pred_probas, self.y_train_pred_proba = self._get_predictions(X=X_train)
+        self.y_test_pred, self.y_test_pred_probas, self.y_test_pred_proba = self._get_predictions(X=X_test)
         
         # Save targets
         self.y_train = y_train
@@ -320,14 +320,16 @@ class ClassificationEvaluator:
         -------
         y_pred : pd.Series
             Predicted classes.
+        y_pred_probas : pd.DataFrame
+            Predicted probabilities.
         y_pred_proba : pd.Series
             Predicted probabilities.
 
         '''
         y_pred = pd.Series(data=self.estimator.predict(X), index=X.index, name='predictions')
-        y_pred_proba = pd.Series(
-            data=self.estimator.predict_proba(X)[:, 1], index=X.index, name='predictions')
-        return y_pred, y_pred_proba
+        y_pred_probas = pd.DataFrame(data=self.estimator.predict_proba(X), index=X.index)
+        y_pred_proba = y_pred_probas[1].rename(index='predictions')
+        return y_pred, y_pred_probas, y_pred_proba
         
     def _get_eval_metrics(
             self, 
