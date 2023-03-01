@@ -288,6 +288,31 @@ class ClassificationEvaluator:
         set_titles(axes=axes)
         return fig
     
+    def plot_ks_statistic(
+            self, 
+            plot_ks_statistic_dt: dict = dict(title_fontsize='small', text_fontsize='small')):
+        '''
+        Plots KS statistic
+
+        Parameters
+        ----------
+        plot_ks_statistic_dt : dict, optional
+            Arguments passed to plotting function. The default is dict(title_fontsize='small', text_fontsize='small').
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        fig, axes = plt.subplots(ncols=2, sharey=True, figsize=(10, 5))
+        plot_ks_statistic_dt.update(y_true=self.y_train, y_probas=self.y_train_pred_probas, ax=axes[0])
+        skplt.metrics.plot_ks_statistic(**plot_ks_statistic_dt)
+        plot_ks_statistic_dt.update(y_true=self.y_test, y_probas=self.y_test_pred_probas, ax=axes[1])
+        skplt.metrics.plot_ks_statistic(**plot_ks_statistic_dt)
+        set_titles(axes=axes)
+        return fig
+    
     def delete_predictions_and_targets(self):
         '''
         Deletes predictions and targets
