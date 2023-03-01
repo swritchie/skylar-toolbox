@@ -524,10 +524,24 @@ class RegressionEvaluator:
         snmes.PredictionErrorDisplay.from_predictions(**from_predictions_dt)
         from_predictions_dt.update(y_true=self.y_test, y_pred=self.y_test_pred, ax=axes[1])
         snmes.PredictionErrorDisplay.from_predictions(**from_predictions_dt)
-        for index_it, split_sr in enumerate(iterable=['train', 'test']):
-            axes[index_it].set(title=split_sr)
+        set_titles(axes=axes)
         fig.tight_layout()
-        return fig    
+        return fig
+    
+    def delete_predictions_and_targets(self):
+        '''
+        Deletes predictions and targets
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        attributes_lt = ['y_train_pred', 'y_train', 'y_test_pred', 'y_test']
+        for attribute_sr in attributes_lt:
+            self.__delattr__(attribute_sr)
+        return self
     
     def _get_predictions(
             self, 
