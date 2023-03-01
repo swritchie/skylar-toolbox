@@ -89,10 +89,9 @@ class ClassificationEvaluator:
             y_pred = self.y_train_pred_proba if split_sr == 'train' else self.y_test_pred_proba
             data_df = pd.concat(objs=[y_true, y_pred], axis=1).describe().round(decimals=3)
             plot_dt = dict(kind='hist', bins=30)
-            y_true.plot(ax=ax, **plot_dt)
-            y_pred.plot(ax=ax, **plot_dt)
+            y_true.plot(ax=ax, title=split_sr, **plot_dt)
+            y_pred.plot(ax=ax, title=split_sr, **plot_dt)
             ax.legend()
-            ax.set(title=split_sr)
             pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
         fig.tight_layout()
         return fig
@@ -137,6 +136,7 @@ class ClassificationEvaluator:
         snmes.ConfusionMatrixDisplay.from_predictions(**from_predictions_dt)
         from_predictions_dt.update(y_true=self.y_test, y_pred=self.y_test_pred, ax=axes[1])
         snmes.ConfusionMatrixDisplay.from_predictions(**from_predictions_dt)
+        set_titles(axes=axes)
         for ax in axes.ravel(): 
             ax.grid(None)
         fig.tight_layout()
@@ -490,10 +490,9 @@ class RegressionEvaluator:
             y_pred = self.y_train_pred if split_sr == 'train' else self.y_test_pred
             data_df = pd.concat(objs=[y_true, y_pred], axis=1).describe().round(decimals=3)
             plot_dt = dict(kind='kde')
-            y_true.plot(ax=ax, **plot_dt)
-            y_pred.plot(ax=ax, **plot_dt)
+            y_true.plot(ax=ax, title=split_sr, **plot_dt)
+            y_pred.plot(ax=ax, title=split_sr, **plot_dt)
             ax.legend()
-            ax.set(title=split_sr)
             pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
         fig.tight_layout()
         return fig
@@ -610,3 +609,26 @@ class RegressionEvaluator:
             in [('train', X_train, self.y_train), ('test', X_test, self.y_test)]}
         eval_metrics_df = steda.get_differences(df=pd.DataFrame(data=eval_metrics_dt), columns_lt=['train', 'test'])
         return eval_metrics_df
+    
+# =============================================================================
+# set_titles
+# =============================================================================
+
+def set_titles(axes: plt.Axes):
+        '''
+        Sets titles for multiple axes
+
+        Parameters
+        ----------
+        axes : plt.Axes
+            Axes.
+
+        Returns
+        -------
+        axes : plt.Axes
+            Axes.
+
+        '''
+        for index_it, title_sr in enumerate(iterable=['train', 'test']):
+            axes[index_it].set(title=title_sr)
+        return axes
