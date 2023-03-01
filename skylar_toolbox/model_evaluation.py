@@ -3,6 +3,7 @@
 # =============================================================================
 
 import pandas as pd
+import scikitplot as skplt
 from matplotlib import pyplot as plt
 from sklearn import calibration as sncn
 from sklearn import metrics as snmes
@@ -58,8 +59,8 @@ class ClassificationEvaluator:
 
         '''
         # Get predictions
-        self.y_train_pred, self.y_train_pred_proba = self._get_predictions(X=X_train)
-        self.y_test_pred, self.y_test_pred_proba = self._get_predictions(X=X_test)
+        self.y_train_pred, self.y_train_pred_probas, self.y_train_pred_proba = self._get_predictions(X=X_train)
+        self.y_test_pred, self.y_test_pred_probas, self.y_test_pred_proba = self._get_predictions(X=X_test)
         
         # Save targets
         self.y_train = y_train
@@ -88,10 +89,9 @@ class ClassificationEvaluator:
             y_pred = self.y_train_pred_proba if split_sr == 'train' else self.y_test_pred_proba
             data_df = pd.concat(objs=[y_true, y_pred], axis=1).describe().round(decimals=3)
             plot_dt = dict(kind='hist', bins=30)
-            y_true.plot(ax=ax, **plot_dt)
-            y_pred.plot(ax=ax, **plot_dt)
+            y_true.plot(ax=ax, title=split_sr, **plot_dt)
+            y_pred.plot(ax=ax, title=split_sr, **plot_dt)
             ax.legend()
-            ax.set(title=split_sr)
             pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
         fig.tight_layout()
         return fig
@@ -136,6 +136,7 @@ class ClassificationEvaluator:
         snmes.ConfusionMatrixDisplay.from_predictions(**from_predictions_dt)
         from_predictions_dt.update(y_true=self.y_test, y_pred=self.y_test_pred, ax=axes[1])
         snmes.ConfusionMatrixDisplay.from_predictions(**from_predictions_dt)
+        set_titles(axes=axes)
         for ax in axes.ravel(): 
             ax.grid(None)
         fig.tight_layout()
@@ -215,7 +216,7 @@ class ClassificationEvaluator:
     
     def plot_calibration(
             self,
-            from_predictions_dt: dict = dict()):
+            from_predictions_dt: dict = dict(n_bins=10)):
         '''
         Plots calibration
 
@@ -237,6 +238,73 @@ class ClassificationEvaluator:
         sncn.CalibrationDisplay.from_predictions(**from_predictions_dt)
         return fig
     
+    def plot_cumulative_gain(
+            self, 
+            plot_cumulative_gain_dt: dict = dict(title_fontsize='small', text_fontsize='small')):
+        '''
+        Plots cumulative gain
+
+        Parameters
+        ----------
+        plot_cumulative_gain_dt : dict, optional
+            Arguments passed to plotting function. The default is dict(title_fontsize='small', text_fontsize='small').
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        fig, axes = plt.subplots(ncols=2, sharey=True, figsize=(10, 5))
+        plot_cumulative_gain_dt.update(y_true=self.y_train, y_probas=self.y_train_pred_probas, ax=axes[0])
+        skplt.metrics.plot_cumulative_gain(**plot_cumulative_gain_dt)
+        plot_cumulative_gain_dt.update(y_true=self.y_test, y_probas=self.y_test_pred_probas, ax=axes[1])
+        skplt.metrics.plot_cumulative_gain(**plot_cumulative_gain_dt)
+        set_titles(axes=axes)
+        return fig
+    
+    def plot_lift_curve(
+            self, 
+            plot_lift_curve_dt: dict = dict(title_fontsize='small', text_fontsize='small')):
+        '''
+        Plots lift curve
+
+        Parameters
+        ----------
+        plot_lift_curve_dt : dict, optional
+            Arguments passed to plotting function. The default is dict(title_fontsize='small', text_fontsize='small').
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        fig, axes = plt.subplots(ncols=2, sharey=True, figsize=(10, 5))
+        plot_lift_curve_dt.update(y_true=self.y_train, y_probas=self.y_train_pred_probas, ax=axes[0])
+        skplt.metrics.plot_lift_curve(**plot_lift_curve_dt)
+        plot_lift_curve_dt.update(y_true=self.y_test, y_probas=self.y_test_pred_probas, ax=axes[1])
+        skplt.metrics.plot_lift_curve(**plot_lift_curve_dt)
+        set_titles(axes=axes)
+        return fig
+    
+    def delete_predictions_and_targets(self):
+        '''
+        Deletes predictions and targets
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        attributes_lt = [
+            'y_train_pred', 'y_train_pred_probas', 'y_train_pred_proba', 'y_train',
+            'y_test_pred', 'y_test_pred_probas', 'y_test_pred_proba', 'y_test']
+        for attribute_sr in attributes_lt:
+            self.__delattr__(attribute_sr)
+        return self
+    
     def _get_predictions(
             self, 
             X: pd.DataFrame):
@@ -252,14 +320,16 @@ class ClassificationEvaluator:
         -------
         y_pred : pd.Series
             Predicted classes.
+        y_pred_probas : pd.DataFrame
+            Predicted probabilities.
         y_pred_proba : pd.Series
             Predicted probabilities.
 
         '''
         y_pred = pd.Series(data=self.estimator.predict(X), index=X.index, name='predictions')
-        y_pred_proba = pd.Series(
-            data=self.estimator.predict_proba(X)[:, 1], index=X.index, name='predictions')
-        return y_pred, y_pred_proba
+        y_pred_probas = pd.DataFrame(data=self.estimator.predict_proba(X), index=X.index)
+        y_pred_proba = y_pred_probas[1].rename(index='predictions')
+        return y_pred, y_pred_probas, y_pred_proba
         
     def _get_eval_metrics(
             self, 
@@ -420,10 +490,9 @@ class RegressionEvaluator:
             y_pred = self.y_train_pred if split_sr == 'train' else self.y_test_pred
             data_df = pd.concat(objs=[y_true, y_pred], axis=1).describe().round(decimals=3)
             plot_dt = dict(kind='kde')
-            y_true.plot(ax=ax, **plot_dt)
-            y_pred.plot(ax=ax, **plot_dt)
+            y_true.plot(ax=ax, title=split_sr, **plot_dt)
+            y_pred.plot(ax=ax, title=split_sr, **plot_dt)
             ax.legend()
-            ax.set(title=split_sr)
             pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
         fig.tight_layout()
         return fig
@@ -455,10 +524,24 @@ class RegressionEvaluator:
         snmes.PredictionErrorDisplay.from_predictions(**from_predictions_dt)
         from_predictions_dt.update(y_true=self.y_test, y_pred=self.y_test_pred, ax=axes[1])
         snmes.PredictionErrorDisplay.from_predictions(**from_predictions_dt)
-        for index_it, split_sr in enumerate(iterable=['train', 'test']):
-            axes[index_it].set(title=split_sr)
+        set_titles(axes=axes)
         fig.tight_layout()
-        return fig    
+        return fig
+    
+    def delete_predictions_and_targets(self):
+        '''
+        Deletes predictions and targets
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        attributes_lt = ['y_train_pred', 'y_train', 'y_test_pred', 'y_test']
+        for attribute_sr in attributes_lt:
+            self.__delattr__(attribute_sr)
+        return self
     
     def _get_predictions(
             self, 
@@ -540,3 +623,26 @@ class RegressionEvaluator:
             in [('train', X_train, self.y_train), ('test', X_test, self.y_test)]}
         eval_metrics_df = steda.get_differences(df=pd.DataFrame(data=eval_metrics_dt), columns_lt=['train', 'test'])
         return eval_metrics_df
+    
+# =============================================================================
+# set_titles
+# =============================================================================
+
+def set_titles(axes: plt.Axes):
+        '''
+        Sets titles for multiple axes
+
+        Parameters
+        ----------
+        axes : plt.Axes
+            Axes.
+
+        Returns
+        -------
+        axes : plt.Axes
+            Axes.
+
+        '''
+        for index_it, title_sr in enumerate(iterable=['train', 'test']):
+            axes[index_it].set(title=title_sr)
+        return axes
