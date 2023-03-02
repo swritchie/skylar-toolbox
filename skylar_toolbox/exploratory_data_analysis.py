@@ -172,7 +172,7 @@ def plot_value_counts(
     '''
     value_counts_df = (
         ss
-        .value_counts()
+        .value_counts(dropna=False)
         .to_frame(name='cnt')
         .assign(pct = lambda x: x['cnt'] / x['cnt'].sum()))
     display_df = value_counts_df.nlargest(n=nlargest_n_it, columns='cnt')
