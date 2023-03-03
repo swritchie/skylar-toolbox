@@ -1020,7 +1020,8 @@ class ExampleSelector:
     def fit(
             self,
             X: pd.DataFrame,
-            y: pd.Series):
+            y: pd.Series, 
+            delete_predictions_and_targets_bl: bool = True):
         '''
         Fits models, stores metadata, and drops examples
 
@@ -1030,6 +1031,8 @@ class ExampleSelector:
             Feature matrix.
         y : pd.Series
             Target vector.
+        delete_predictions_and_targets_bl : bool, optional
+            Flag for whether to delete to save memory and storage. The default is True.
 
         Returns
         -------
@@ -1079,6 +1082,10 @@ class ExampleSelector:
             result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, pct_diff_ft=pct_diff_ft, examples_ix=examples_ix, drop_ix=drop_ix, keep_ix=keep_ix)
             results_lt.append(result_dt)
             self._print_result(result_dt=result_dt)
+            
+            # Evaluate whether to delete
+            if delete_predictions_and_targets_bl:
+                ccbcv.delete_predictions_and_targets()
 
             # Evaluate whether to continue
             if ((iteration_it - self.best_iteration_it == self.wait_it) or
@@ -1487,7 +1494,8 @@ class FeatureSelector:
     def fit(
             self, 
             X: pd.DataFrame, 
-            y: pd.Series):
+            y: pd.Series,
+            delete_predictions_and_targets_bl: bool = True):
         '''
         Fits models, stores metadata, and drops features
 
@@ -1497,6 +1505,8 @@ class FeatureSelector:
             Feature matrix.
         y : pd.Series
             Target vector.
+        delete_predictions_and_targets_bl : bool, optional
+            Flag for whether to delete to save memory and storage. The default is True.
 
         Returns
         -------
@@ -1540,6 +1550,10 @@ class FeatureSelector:
             result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, pct_diff_ft=pct_diff_ft, features_ix=features_ix, drop_ix=drop_ix, keep_ix=keep_ix)
             results_lt.append(result_dt)
             self._print_result(result_dt=result_dt)
+            
+            # Evaluate whether to delete
+            if delete_predictions_and_targets_bl:
+                ccbcv.delete_predictions_and_targets()
             
             # Evaluate whether to continue
             if ((iteration_it - self.best_iteration_it == self.wait_it) or 
