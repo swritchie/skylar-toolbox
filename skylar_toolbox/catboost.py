@@ -967,7 +967,9 @@ class ExampleSelector:
             objective_sr: str,
             losses_nlargest_n_it: int,
             example_importances_nlargest_n_it: int,
-            wait_it: int):
+            wait_it: int,
+            delete_predictions_and_targets_bl: bool = False,
+            store_models_bl: bool = True):
         '''
         Selects examples by iteratively removing those with highest validation losses
 
@@ -987,6 +989,10 @@ class ExampleSelector:
             Number of train examples to drop.
         wait_it : int
             Number of iterations to wait before terminating procedure.
+        delete_predictions_and_targets_bl : bool, optional
+            Flag for whether to delete during procedure to save memory. The default is False.
+        store_models_bl : bool, optional
+            Flag for whether to store during procedure to save memory. The default is True.
 
         Raises
         ------
@@ -1062,7 +1068,10 @@ class ExampleSelector:
             # Fit model
             ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
             ccbcv.fit(X=X, y=y)
-            self.models_lt.append(ccbcv)
+            if self.delete_predictions_and_targets_bl:
+                ccbcv.delete_predictions_and_targets()
+            if self.store_models_bl:
+                self.models_lt.append(ccbcv)
 
             # Get score and update bests
             score_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'validation_mean']
@@ -1436,7 +1445,9 @@ class FeatureSelector:
             sklearn_splitter, 
             objective_sr: str, 
             strategy_sr: str, 
-            wait_it: int):
+            wait_it: int, 
+            delete_predictions_and_targets_bl: bool = False,
+            store_models_bl: bool = True):
         '''
         Selects features by iteratively removing those with highest validation losses
 
@@ -1454,7 +1465,10 @@ class FeatureSelector:
             Strategy for dropping features.
         wait_it : int
             Number of iterations to wait before terminating procedure.
-
+        delete_predictions_and_targets_bl : bool, optional
+            Flag for whether to delete during procedure to save memory. The default is False.
+        store_models_bl : bool, optional
+            Flag for whether to store during procedure to save memory. The default is True.
 
         Raises
         ------
@@ -1533,7 +1547,10 @@ class FeatureSelector:
             # Fit model
             ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
             ccbcv.fit(X=X, y=y)
-            self.models_lt.append(ccbcv)
+            if self.delete_predictions_and_targets_bl:
+                ccbcv.delete_predictions_and_targets()
+            if self.store_models_bl:
+                self.models_lt.append(ccbcv)
             
             # Get score and update bests
             score_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'validation_mean']
