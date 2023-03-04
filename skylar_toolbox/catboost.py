@@ -1016,12 +1016,13 @@ class ExampleSelector:
         self.losses_nlargest_n_it = losses_nlargest_n_it
         self.example_importances_nlargest_n_it = example_importances_nlargest_n_it
         self.wait_it = wait_it
+        self.delete_predictions_and_targets_bl = delete_predictions_and_targets_bl
+        self.store_models_bl = store_models_bl
 
     def fit(
             self,
             X: pd.DataFrame,
-            y: pd.Series, 
-            delete_predictions_and_targets_bl: bool = True):
+            y: pd.Series):
         '''
         Fits models, stores metadata, and drops examples
 
@@ -1031,8 +1032,6 @@ class ExampleSelector:
             Feature matrix.
         y : pd.Series
             Target vector.
-        delete_predictions_and_targets_bl : bool, optional
-            Flag for whether to delete to save memory and storage. The default is True.
 
         Returns
         -------
@@ -1083,10 +1082,9 @@ class ExampleSelector:
             results_lt.append(result_dt)
             self._print_result(result_dt=result_dt)
             
-            # Evaluate whether to delete
-            if delete_predictions_and_targets_bl:
-                ccbcv.delete_predictions_and_targets()
-
+            # Checkpoint
+            pd.to_pickle(obj=self, filepath_or_buffer=os.path.join(output_directory_sr, 'es.pkl'), protocol=4)
+            
             # Evaluate whether to continue
             if ((iteration_it - self.best_iteration_it == self.wait_it) or
             (examples_ix.shape[0] == 1) or
