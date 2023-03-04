@@ -1049,7 +1049,7 @@ class ExampleSelector:
         iteration_it = 0
         self.models_lt = []
         self.inspectors_lt = []
-        results_lt = []
+        self.results_lt = []
 
         # Loop
         while True:
@@ -1082,8 +1082,14 @@ class ExampleSelector:
             # Get and print result
             pct_diff_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'pct_diff']
             result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, pct_diff_ft=pct_diff_ft, examples_ix=examples_ix, drop_ix=drop_ix, keep_ix=keep_ix)
-            results_lt.append(result_dt)
+            self.results_lt.append(result_dt)
             self._print_result(result_dt=result_dt)
+            
+            # Get results
+            self.results_df = self._get_results()
+    
+            # Get ranks
+            self.ranks_df = self._get_ranks()
             
             # Checkpoint
             pd.to_pickle(obj=self, filepath_or_buffer=os.path.join(output_directory_sr, 'es.pkl'), protocol=4)
@@ -1097,12 +1103,6 @@ class ExampleSelector:
                 X.drop(index=drop_ix, inplace=True)
                 y.drop(index=drop_ix, inplace=True)
                 iteration_it += 1
-
-        # Get results
-        self.results_df = self._get_results(results_lt=results_lt)
-
-        # Get ranks
-        self.ranks_df = self._get_ranks()
         return self
 
     def weight_ranks(
@@ -1374,16 +1374,9 @@ class ExampleSelector:
             if key_sr != 'examples':
                 print('- {}: {}'.format(key_sr, result_dt[key_sr]))
 
-    def _get_results(
-            self,
-            results_lt: list):
+    def _get_results(self):
         '''
         Gets results
-
-        Parameters
-        ----------
-        results_lt : list
-            Results.
 
         Returns
         -------
@@ -1391,7 +1384,7 @@ class ExampleSelector:
             Results.
 
         '''
-        results_df = pd.DataFrame(data=results_lt).set_index(keys='iterations')
+        results_df = pd.DataFrame(data=self.results_lt).set_index(keys='iterations')
         return results_df
 
     def _get_ranks(self):
@@ -1522,7 +1515,7 @@ class FeatureSelector:
         # Initialize
         iteration_it = 0
         self.models_lt = []
-        results_lt = []
+        self.results_lt = []
         
         # Loop
         while True:
@@ -1550,8 +1543,14 @@ class FeatureSelector:
             # Get and print result
             pct_diff_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'pct_diff']
             result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, pct_diff_ft=pct_diff_ft, features_ix=features_ix, drop_ix=drop_ix, keep_ix=keep_ix)
-            results_lt.append(result_dt)
+            self.results_lt.append(result_dt)
             self._print_result(result_dt=result_dt)
+            
+            # Get results
+            self.results_df = self._get_results()
+            
+            # Get ranks
+            self.ranks_df = self._get_ranks()
             
             # Checkpoint
             pd.to_pickle(obj=self, filepath_or_buffer=os.path.join(output_directory_sr, 'fs.pkl'), protocol=4)
@@ -1564,12 +1563,6 @@ class FeatureSelector:
             else:
                 X.drop(columns=drop_ix, inplace=True)
                 iteration_it += 1
-        
-        # Get results
-        self.results_df = self._get_results(results_lt=results_lt)
-        
-        # Get ranks
-        self.ranks_df = self._get_ranks()
         return self
 
     def weight_ranks(
@@ -1836,16 +1829,9 @@ class FeatureSelector:
             if key_sr != 'features':
                 print('- {}: {}'.format(key_sr, result_dt[key_sr]))
     
-    def _get_results(
-            self, 
-            results_lt: list):
+    def _get_results(self):
         '''
         Gets results
-
-        Parameters
-        ----------
-        results_lt : list
-            Results.
 
         Returns
         -------
@@ -1853,7 +1839,7 @@ class FeatureSelector:
             Results.
 
         '''
-        results_df = pd.DataFrame(data=results_lt).set_index(keys='iterations')
+        results_df = pd.DataFrame(data=self.results_lt).set_index(keys='iterations')
         return results_df
     
     def _get_ranks(self):
