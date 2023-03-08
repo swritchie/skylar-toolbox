@@ -1433,7 +1433,8 @@ class FeatureSelector:
             objective_sr: str, 
             strategy_sr: str, 
             wait_it: int, 
-            store_models_bl: bool = True):
+            store_models_bl: bool = True,
+            losses_nsmallest_n_it: int = 1):
         '''
         Selects features by iteratively removing those with highest validation losses
 
@@ -1453,6 +1454,8 @@ class FeatureSelector:
             Number of iterations to wait before terminating procedure.
         store_models_bl : bool, optional
             Flag for whether to store during procedure to save memory. The default is True.
+        losses_nsmallest_n_it : int, optional
+            Number of features to drop. The default is 1.
 
         Raises
         ------
@@ -1461,7 +1464,7 @@ class FeatureSelector:
         ValueError
             Permitted values of objective_sr are ['minimize', 'maximize']
         NotImplementedError
-            Implemented values of strategy_sr are ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_lowest_mean']
+            Implemented values of strategy_sr are ['drop_negative_means', 'drop_negative_ucis', 'drop_nsmallest_means']
 
         Returns
         -------
@@ -1481,12 +1484,13 @@ class FeatureSelector:
         self.objective_sr = objective_sr
         self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
         self.best_iteration_it = 0
-        implemented_strategies_lt = ['drop_mean_at_or_below_zero', 'drop_uci_below_zero', 'drop_lowest_mean']
+        implemented_strategies_lt = ['drop_negative_means', 'drop_negative_ucis', 'drop_nsmallest_means']
         if strategy_sr not in implemented_strategies_lt:
             raise NotImplementedError(f'Implemented values of strategy_sr are {implemented_strategies_lt}')
         self.strategy_sr = strategy_sr
         self.wait_it = wait_it
         self.store_models_bl = store_models_bl
+        self.losses_nsmallest_n_it = losses_nsmallest_n_it
         
     def fit(
             self, 
@@ -1755,12 +1759,12 @@ class FeatureSelector:
 
         '''
         features_ix = X.columns
-        if self.strategy_sr == 'drop_mean_at_or_below_zero':
-            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
-        elif self.strategy_sr == 'drop_uci_below_zero':
+        if self.strategy_sr == 'drop_negative_means':
+            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean < 0').index
+        elif self.strategy_sr == 'drop_negative_ucis':
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_uci < 0').index
-        elif self.strategy_sr == 'drop_lowest_mean':
-            drop_ix = pd.Index(data=[ccbcv.lfc_feature_importances_df['validation_mean'].idxmin()])
+        elif self.strategy_sr == 'drop_nsmallest_means':
+            drop_ix = ccbcv.lfc_feature_importances_df['validation_mean'].nsmallest(n=self.losses_nsmallest_n_it).index
         keep_ix = features_ix.difference(other=drop_ix)
         return features_ix, drop_ix, keep_ix
     
