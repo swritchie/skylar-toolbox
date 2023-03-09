@@ -1096,8 +1096,8 @@ class ExampleSelector:
             
             # Evaluate whether to continue
             if ((iteration_it - self.best_iteration_it == self.wait_it) or
-            (examples_ix.shape[0] == 1) or
-            (drop_ix.empty)):
+            (drop_ix.empty) or
+            (keep_ix.empty)):
                 break
             else:
                 X.drop(index=drop_ix, inplace=True)
@@ -1561,8 +1561,8 @@ class FeatureSelector:
             
             # Evaluate whether to continue
             if ((iteration_it - self.best_iteration_it == self.wait_it) or 
-            (features_ix.shape[0] == 1) or 
-            (drop_ix.empty)):
+            (drop_ix.empty) or
+            (keep_ix.empty)):
                 break
             else:
                 X.drop(columns=drop_ix, inplace=True)
