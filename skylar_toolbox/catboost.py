@@ -3,12 +3,15 @@
 # =============================================================================
 
 import catboost as cb
+import json
 import numpy as np
 import os
 import pandas as pd
+import tqdm
 from catboost import utils as cbus
 from matplotlib import pyplot as plt
 from scipy import special as sysl
+from sklearn import inspection as snin
 from skylar_toolbox import exploratory_data_analysis as steda
 
 # =============================================================================
@@ -1419,7 +1422,577 @@ class ExampleSelector:
         '''
         best_iteration_it = self.ranks_df.iloc[:, -1].idxmin()
         return best_iteration_it
+
+# =============================================================================
+# FeatureInspector
+# =============================================================================
+
+class FeatureInspector:
+    def __init__(
+            self, 
+            ccb: CustomCatBoost, 
+            interaction_strengths_threshold_ft: float):
+        '''
+        Stores metadata and provides plotting methods
+
+        Parameters
+        ----------
+        ccb : CustomCatBoost
+            Model.
+        interaction_strengths_threshold_ft : float
+            Threshold for meaningful interactions.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.ccb = ccb
+        self.interaction_strengths_threshold_ft = interaction_strengths_threshold_ft
     
+    def fit(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series):
+        '''
+        Stores metadata
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Save model
+        fname_sr = os.path.join(self.ccb.cat_boost_dt['train_dir'], 'cbm.json')
+        self.ccb.cbm.save_model(fname=fname_sr, format='json')
+        
+        # Read in model
+        with open(file=fname_sr) as fe:
+            self.model_dt = json.load(fp=fe)
+        
+        # Get float features
+        self.float_features_df = (
+            pd.DataFrame(data=self.model_dt['features_info']['float_features'])
+            .astype(dtype={'feature_index': pd.Int32Dtype()}))
+        
+        # Get splits
+        self.splits_df = self._get_splits()
+        
+        # Get features
+        self.features_lt = self.ccb.cbm.feature_names_
+        self.cat_features_lt = self.ccb.cat_boost_dt['cat_features']
+        self.other_features_lt = list(set(self.features_lt).difference(set(self.cat_features_lt)))
+        
+        # Sort columns
+        X = X[self.features_lt]
+        
+        # Get LFC feature importances by tree
+        self.lfc_feature_importances_by_tree_df = self._get_lfc_feature_importances_by_tree(X=X, y=y)
+        
+        # Join importances to splits
+        self._join_importances_to_splits()
+        
+        # Get LFC feature importances by feature, tree, and border
+        self.lfc_feature_importances_by_feature_tree_and_border_df = \
+            self._get_lfc_feature_importances_by_feature_tree_and_border()
+        
+        # Get LFC feature importances by feature and border
+        self.lfc_feature_importances_by_feature_and_border_df = self._get_lfc_feature_importances_by_feature_and_border()
+        
+        # Get SHAPs
+        shaps_df = self._get_shaps(X=X, y=y)
+        
+        # Get SHAPs by feature and border
+        self.oneway_shaps_dt = self._get_shaps_by_feature_and_border(X=X, shaps_df=shaps_df)
+        
+        # Flag categorical in interactions
+        self._flag_categorical_interactions()
+        
+        # Get SHAPs by features
+        self.twoway_shaps_dt = self._get_shaps_by_features(X=X, shaps_df=shaps_df)
+        return self
+    
+    def plot_lfc_feature_importances_by_tree(
+            self, 
+            feature_sr: str):
+        '''
+        Plots LFC feature importance by tree for given feature
+
+        Parameters
+        ----------
+        feature_sr : str
+            Feature.
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        plot_ss = self.lfc_feature_importances_by_tree_df[feature_sr]
+        data_ss = plot_ss.describe().round(decimals=3)
+        ax = plot_ss.plot(marker='.', drawstyle='steps-mid')
+        pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        fig = ax.figure
+        return fig
+    
+    def plot_lfc_feature_importances_by_border(
+            self, 
+            feature_sr: str):
+        '''
+        Plots LFC feature importance by border for given float feature
+
+        Parameters
+        ----------
+        feature_sr : str
+            Feature.
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        grouped_df = self.lfc_feature_importances_by_feature_and_border_df.loc[feature_sr, :]
+        ax = self._plot_group_means(grouped_df=grouped_df, sort_bl=False)
+        ax.set(title=feature_sr)
+        fig = ax.figure
+        return fig
+    
+    def plot_oneway_shaps(
+            self, 
+            feature_sr: str, 
+            sort_bl: bool):
+        '''
+        Plots mean SHAP values by border for given feature
+
+        Parameters
+        ----------
+        feature_sr : str
+            Feature.
+        sort_bl : bool
+            Flag for whether to sort borders (e.g., for categorical features).
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        grouped_df = self.oneway_shaps_dt.get(feature_sr)
+        ax = self._plot_group_means(grouped_df=grouped_df, sort_bl=sort_bl)
+        ax.set(title=feature_sr)
+        fig = ax.figure
+        return fig
+    
+    def plot_twoway_shaps(
+            self, 
+            features_te: tuple, 
+            heatmap_dt: dict = dict()):
+        '''
+        Plots mean SHAP values for given pair of features with high interaction strengths
+
+        Parameters
+        ----------
+        features_te : tuple
+            Pair of features.
+        heatmap_dt : dict, optional
+            Optional arguments passed to sns.heatmap(). The default is dict().
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        crosstab_df = self.twoway_shaps_dt.get(features_te)
+        fig, ax = plt.subplots()
+        sns.heatmap(data=crosstab_df, cmap=plt.cm.coolwarm, ax=ax, **heatmap_dt)
+        ax.grid(visible=False)
+        return fig
+    
+    def plot_partial_dependence(
+            self, 
+            X: pd.DataFrame, 
+            features_lt: list, 
+            from_estimator_dt: dict = dict()):
+        '''
+        Plots partial dependence for one or pair of features
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        features_lt : list
+            List of feature(s) to plot.
+        from_estimator_dt : dict, optional
+            Optional arguments passed to snin.PartialDependenceDisplay.from_estimator(). The default is dict().
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        pdd = snin.PartialDependenceDisplay.from_estimator(
+            estimator=cb.to_classifier(model=self.ccb.cbm) if self.ccb.model_type_sr == 'classification' \
+                else cb.to_regressor(model=self.ccb.cbm), 
+            X=X[self.features_lt], 
+            features=features_lt,
+            contour_kw=dict(cmap=plt.cm.coolwarm),
+            **from_estimator_dt)
+        fig = pdd.figure_
+        return fig
+    
+    def _get_splits(self):
+        '''
+        Gets splits for each tree from model dict
+
+        Returns
+        -------
+        splits_df : pd.DataFrame
+            Splits.
+
+        '''
+        depth_it = self.ccb.cbm.get_all_params().get('depth')
+        splits_df = pd.concat(objs=[
+            pd.DataFrame(data=self.model_dt['oblivious_trees'][tree_index_it]['splits'])
+            .astype(dtype={'float_feature_index': pd.Int32Dtype()})
+            .assign(
+                tree_index = tree_index_it,
+                depth_index = lambda x: depth_it - x.index.to_numpy() - 1)
+            .sort_values(by='depth_index')
+            for tree_index_it in range(len(self.model_dt['oblivious_trees']))
+        ], ignore_index=True)
+        splits_df = (
+            splits_df
+            .merge(
+                right=self.float_features_df[['feature_id', 'feature_index']], 
+                how='left', 
+                left_on='float_feature_index', 
+                right_on='feature_index', 
+                validate='many_to_one')
+            .drop(columns='feature_index'))
+        return splits_df
+    
+    def _get_lfc_feature_importances_by_tree(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series):
+        '''
+        Gets LFC feature importances by tree
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        def _get_lfc_feature_importances(
+                cbm: cb.CatBoost, 
+                X: pd.DataFrame, 
+                y: pd.Series, 
+                cat_features_lt: list):
+            '''
+            Gets LFC feature importances
+
+            Parameters
+            ----------
+            cbm : cb.CatBoost
+                Model.
+            X : pd.DataFrame
+                Feature matrix.
+            y : pd.Series
+                Target vector.
+            cat_features_lt : list
+                Categorical features.
+
+            Returns
+            -------
+            lfc_feature_importances_ss : pd.Series
+                LFC feature importances.
+
+            '''
+            lfc_feature_importances_ay = cbm.get_feature_importance(
+                data=cb.Pool(data=X, label=y, cat_features=cat_features_lt), 
+                type='LossFunctionChange')
+            lfc_feature_importances_ss = pd.Series(data=lfc_feature_importances_ay, index=X.columns, name='importances')
+            return lfc_feature_importances_ss
+        lfc_feature_importances_lt = []
+        desc_sr = 'Get LFC feature importances by tree'
+        for tree_index_it in tqdm.tqdm(iterable=range(self.ccb.cbm.tree_count_), desc=desc_sr):
+            cbm2 = self.ccb.cbm.copy()
+            cbm2.shrink(ntree_start=tree_index_it, ntree_end=tree_index_it + 1)
+            lfc_feature_importances_ss = _get_lfc_feature_importances(cbm=cbm2, X=X, y=y, cat_features_lt=self.cat_features_lt)
+            lfc_feature_importances_lt.append(lfc_feature_importances_ss)
+        lfc_feature_importances_by_tree_df = pd.concat(objs=lfc_feature_importances_lt, axis=1, ignore_index=True).T
+        return lfc_feature_importances_by_tree_df
+    
+    def _join_importances_to_splits(self):
+        '''
+        Joins importances to splits
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        desc_sr = 'Join importances to splits'
+        for float_feature_sr in tqdm.tqdm(iterable=self.float_features_df['feature_id'], desc=desc_sr):
+            float_feature_importances_ss = self.lfc_feature_importances_by_tree_df[float_feature_sr]
+            float_feature_importances_df = (
+                float_feature_importances_ss
+                .reset_index()
+                .set_axis(labels=['tree_index', 'importances'], axis=1)
+                .assign(feature_id = float_feature_sr))
+            self.splits_df = self.splits_df.merge(
+                right=float_feature_importances_df, 
+                how='left', 
+                on=['tree_index', 'feature_id'], 
+                validate='many_to_one')
+            if 'importances_x' in self.splits_df.columns:
+                self.splits_df = (
+                    self.splits_df
+                    .assign(importances = lambda x: x.filter(like='importances').sum(axis=1))
+                    .drop(columns=['importances_x', 'importances_y']))
+        return self
+    
+    def _get_lfc_feature_importances_by_feature_tree_and_border(self):
+        '''
+        Gets LFC feature importances by feature, tree, and border
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        def _apply_func(in_df: pd.DataFrame):
+            '''
+            Prepares data frame for each group
+
+            Parameters
+            ----------
+            in_df : pd.DataFrame
+                Input data frame.
+
+            Returns
+            -------
+            out_df : pd.DataFrame
+                Output data frame.
+
+            '''
+            out_df = (
+                in_df[['tree_index', 'border', 'importances']]
+                .assign(bad_flag = lambda x: x['importances'] < 0))
+            return out_df
+        lfc_feature_importances_by_feature_tree_and_border_df = (
+            self.splits_df
+            .groupby(by='feature_id', group_keys=True)
+            .apply(func=_apply_func))
+        return lfc_feature_importances_by_feature_tree_and_border_df
+    
+    def _get_lfc_feature_importances_by_feature_and_border(self):
+        '''
+        Gets LFC feature importances by feature and border
+
+        Returns
+        -------
+        lfc_feature_importances_by_feature_and_border_df : pd.DataFrame
+            LFC feature importances.
+
+        '''
+        lfc_feature_importances_by_feature_and_border_df = (
+            steda.get_group_means(
+                df=self.lfc_feature_importances_by_feature_tree_and_border_df.reset_index(), 
+                groupby_by_lt=['feature_id', 'border'], 
+                column_sr='importances')
+            .assign(bad_mean_flag = lambda x: x['mean'] < 0))
+        return lfc_feature_importances_by_feature_and_border_df
+    
+    def _get_shaps(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series):
+        '''
+        Gets SHAP values
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+
+        Returns
+        -------
+        shaps_df : pd.DataFrame
+            SHAP values.
+
+        '''
+        shaps_df = pd.DataFrame(
+            data=self.ccb.cbm.get_feature_importance(
+                data=cb.Pool(data=X, label=y, cat_features=self.cat_features_lt), 
+                type='ShapValues', 
+                shap_calc_type='Exact'), 
+            index=X.index, 
+            columns=X.columns.tolist() + ['bias'])
+        return shaps_df
+    
+    def _cut_feature(
+            self, 
+            ss: pd.Series):
+        '''
+        Cuts feature (by borders if float)
+
+        Parameters
+        ----------
+        ss : pd.Series
+            Feature.
+
+        Returns
+        -------
+        cut_ss : pd.Series
+            Cut feature.
+
+        '''
+        feature_sr = ss.name
+        if feature_sr in self.cat_features_lt:
+            cut_ss = ss
+        else:
+            bins_lt = (
+                [-np.inf] + 
+                self.float_features_df.query(expr=f'feature_id == "{feature_sr}"')['borders'].squeeze() + 
+                [np.inf])
+            cut_ss = pd.cut(x=ss, bins=bins_lt)
+        return cut_ss
+    
+    def _get_shaps_by_feature_and_border(
+            self, 
+            X: pd.DataFrame, 
+            shaps_df: pd.DataFrame):
+        '''
+        Gets SHAP values by feature and border
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        shaps_df : pd.DataFrame
+            SHAP values.
+
+        Returns
+        -------
+        oneway_shaps_dt : dict
+            SHAP values by borders.
+
+        '''
+        oneway_shaps_dt = {}
+        desc_sr = 'Get SHAPs by feature and border'
+        for feature_sr in tqdm.tqdm(iterable=X.columns, desc=desc_sr):
+            df = pd.concat(objs=[
+                self._cut_feature(ss=X[feature_sr]), 
+                shaps_df[feature_sr].rename(index='shaps')
+            ], axis=1)
+            oneway_shaps_dt[feature_sr] = steda.get_group_means(
+                df=df, 
+                groupby_by_lt=[feature_sr], 
+                column_sr='shaps')
+        return oneway_shaps_dt
+    
+    def _flag_categorical_interactions(self):
+        '''
+        Flags categorical features in interactions
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        self.ccb.interaction_strengths_df = self.ccb.interaction_strengths_df.assign(
+            first_categorical_flag = lambda x: x['first_features'].isin(values=self.cat_features_lt),
+            second_categorical_flag = lambda x: x['second_features'].isin(values=self.cat_features_lt),
+            neither_categorical_flag = lambda x: ~x.filter(like='flag').any(axis=1))
+        return self
+    
+    def _get_shaps_by_features(
+            self, 
+            X: pd.DataFrame, 
+            shaps_df: pd.DataFrame):
+        '''
+        Gets SHAP values by pair of features
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        shaps_df : pd.DataFrame
+            SHAP values.
+
+        Returns
+        -------
+        twoway_shaps_dt : TYPE
+            SHAP values by pair of borders.
+
+        '''
+        twoway_shaps_dt = {}
+        interactions_ra = (
+            self.ccb.interaction_strengths_df
+            .query(expr=f'strengths > {self.interaction_strengths_threshold_ft}')[['first_features', 'second_features']]
+            .to_records(index=False))
+        desc_sr = 'Get SHAPs by features'
+        for features_rd in tqdm.tqdm(iterable=interactions_ra, desc=desc_sr):
+            twoway_shaps_dt[tuple(features_rd)] = pd.crosstab(
+                index=self._cut_feature(ss=X[features_rd[0]]), 
+                columns=self._cut_feature(ss=X[features_rd[1]]), 
+                values=shaps_df[list(features_rd)].sum(axis=1), 
+                aggfunc='mean')
+        return twoway_shaps_dt
+    
+    def _plot_group_means(
+            self, 
+            grouped_df: pd.DataFrame, 
+            sort_bl: bool):
+        '''
+        Plots group means
+
+        Parameters
+        ----------
+        grouped_df : pd.DataFrame
+            Grouped data frame.
+        sort_bl : bool
+            Flag for whether to sort.
+
+        Returns
+        -------
+        ax : plt.Axes
+            Axis.
+
+        '''
+        if sort_bl:
+            grouped_df.sort_values(by='mean', inplace=True)
+        ax = grouped_df.plot(y='mean', yerr='se2')
+        ax.axhline(y=0, c='k', ls=':')
+        ax.tick_params(axis='x', labelrotation=90)
+        return ax
+
 # =============================================================================
 # FeatureSelector
 # =============================================================================
