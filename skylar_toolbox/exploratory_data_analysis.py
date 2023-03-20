@@ -73,6 +73,43 @@ def get_differences(
     return differences_df
 
 # =============================================================================
+# get_group_means
+# =============================================================================
+
+def get_group_means(
+        df: pd.DataFrame, 
+        groupby_by_lt: list, 
+        column_sr: str):
+    '''
+    Groups and gets means and their CIs
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data frame.
+    groupby_by_lt : list
+        Columns by which to group.
+    column_sr : str
+        Column to aggregate.
+
+    Returns
+    -------
+    grouped_df : pd.DataFrame
+        Output data frame.
+
+    '''
+    grouped_df = (
+        df
+        .groupby(by=groupby_by_lt)[column_sr]
+        .agg(func=['mean', 'std', 'count'])
+        .assign(
+            std = lambda x: x['std'].fillna(value=0),
+            se2 = lambda x: 2 * x['std'] / np.sqrt(x['count']),
+            lci = lambda x: x['mean'] - x['se2'],
+            uci = lambda x: x['mean'] + x['se2']))
+    return grouped_df
+
+# =============================================================================
 # get_means
 # =============================================================================
 
