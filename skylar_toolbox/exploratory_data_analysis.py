@@ -6,44 +6,6 @@ import numpy as np
 import pandas as pd
 
 # =============================================================================
-# describe_features
-# =============================================================================
-
-def describe_features(df: pd.DataFrame):
-    '''
-    Describes feature matrix
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Feature matrix
-
-    Returns
-    -------
-    description_df : pd.DataFrame
-        Description
-
-    '''
-    numeric_description_df = (
-        df
-        .describe()
-        .T
-        .assign(
-            oom = lambda x: np.log10(x['50%']).round(), 
-            iqr = lambda x: x['75%'] - x['25%'],
-            low_outlier_flag = lambda x: x['min'] < x['25%'] - 1.5 * x['iqr'],
-            high_outlier_flag = lambda x: x['max'] > x['75%'] + 1.5 * x['iqr']))
-    description_df = pd.concat(objs=[
-        df.dtypes.astype(dtype=str).rename(index='dtypes'),
-        df.nunique().rename(index='nunique'),
-        df.apply(func=lambda x: x.value_counts().nlargest().index.tolist()).rename(index='top_values'),
-        df.isna().mean().rename(index='pct_missing'),
-        numeric_description_df
-    ], axis=1)
-    description_df.sort_values(by=['dtypes', 'nunique'], inplace=True)
-    return description_df
-
-# =============================================================================
 # get_differences
 # =============================================================================
 
