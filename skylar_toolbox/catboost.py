@@ -796,6 +796,9 @@ class ExampleInspector:
             valid_ix = ccb.y_valid.index
             largest_losses_ss = losses_ss.loc[valid_ix].nlargest(n=self.losses_nlargest_n_it)
             
+            # Sort columns
+            X = X[ccb.cbm.feature_names_]
+            
             # Get example importances
             example_importances_ss = self._get_example_importances(largest_losses_ss=largest_losses_ss, ccb=ccb, X=X, y=y)
             example_importances_lt.append(example_importances_ss)
