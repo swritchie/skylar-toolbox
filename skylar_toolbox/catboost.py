@@ -7,6 +7,7 @@ import json
 import numpy as np
 import os
 import pandas as pd
+import seaborn as sns; sns.set()
 import tqdm
 from catboost import utils as cbus
 from matplotlib import pyplot as plt
@@ -1474,12 +1475,15 @@ class FeatureInspector:
 
         '''
         # Save model
-        fname_sr = os.path.join(self.ccb.cat_boost_dt['train_dir'], 'cbm.json')
+        fname_sr = 'cbm.json'
         self.ccb.cbm.save_model(fname=fname_sr, format='json')
         
         # Read in model
         with open(file=fname_sr) as fe:
             self.model_dt = json.load(fp=fe)
+            
+        # Remove model
+        os.remove(path=fname_sr)
         
         # Get float features
         self.float_features_df = (
