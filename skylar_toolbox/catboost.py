@@ -7,6 +7,7 @@ import json
 import numpy as np
 import os
 import pandas as pd
+import seaborn as sns; sns.set()
 import tqdm
 from catboost import utils as cbus
 from matplotlib import pyplot as plt
