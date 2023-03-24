@@ -139,6 +139,47 @@ def plot_histogram(
     return ax
 
 # =============================================================================
+# plot_time_series
+# =============================================================================
+
+def plot_time_series(
+    datetime_ss: pd.Series, 
+    other_ss: pd.Series, 
+    resample_rule_sr: str, 
+    table_bbox_lt: list = [1.25, 0, 0.25, 1]):
+    '''
+    Plots time series
+
+    Parameters
+    ----------
+    datetime_ss : pd.Series
+        Datetimes.
+    other_ss : pd.Series
+        Metric.
+    resample_rule_sr : str
+        Argument passed to pd.DataFrame.resample().
+    table_bbox_lt : list, optional
+        Argument passed to pd.plotting.table(). The default is [1.25, 0, 0.25, 1].
+
+    Returns
+    -------
+    ax : plt.Axes
+        Axis.
+
+    '''
+    plot_ss = (
+        pd.concat(objs=[datetime_ss, other_ss], axis=1)
+        .set_index(keys=datetime_ss.name)
+        .resample(rule=resample_rule_sr)
+        .mean()
+        .squeeze())
+    data_ss = plot_ss.describe().round(decimals=3)
+    ax = plot_ss.plot(marker='.')
+    ax.axhline(y=plot_ss.mean(), c='k', ls=':')
+    pd.plotting.table(ax=ax, data=data_ss, bbox=table_bbox_lt)
+    return ax
+
+# =============================================================================
 # plot_value_counts
 # =============================================================================
 
