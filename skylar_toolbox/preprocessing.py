@@ -17,6 +17,7 @@ class RareLabelEncoderTuner:
         self, 
         model_type_sr: str, 
         cv,
+        model = None,
         min_frequencies_lt: list = [0, 0.01, 0.05, 0.1]):
         '''
         Tunes `tol` for feeg.RareLabelEncoder()
@@ -27,6 +28,8 @@ class RareLabelEncoderTuner:
             Model type.
         cv : TYPE
             Method of cross-validating.
+        model : TYPE, optional
+            Model. The default is None.
         min_frequencies_lt : list, optional
             Minimum frequencies required not to be encoded. The default is [0, 0.01, 0.05, 0.1].
 
@@ -45,6 +48,11 @@ class RareLabelEncoderTuner:
             raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
         self.model_type_sr = model_type_sr
         self.cv = cv
+        if model is None:
+            self.model = snlm.LogisticRegression(penalty=None) if self.model_type_sr == 'classification' \
+                else snlm.LinearRegression()
+        else:
+            self.model = model
         self.min_frequencies_lt = min_frequencies_lt
     
     def fit(
@@ -59,7 +67,7 @@ class RareLabelEncoderTuner:
         X : pd.DataFrame
             Feature matrix.
         y : pd.Series
-            Features.
+            Target vector.
 
         Returns
         -------
@@ -68,12 +76,10 @@ class RareLabelEncoderTuner:
 
         '''
         # Initialize pipeline
-        lr = snlm.LogisticRegression(penalty=None) if self.model_type_sr == 'classification' \
-            else snlm.LinearRegression()
         pe = snpe.Pipeline(steps=[
             ('rare_label_encode', feeg.RareLabelEncoder(n_categories=1, ignore_format=True)),
             ('one_hot_encode', feeg.OneHotEncoder(ignore_format=True)),
-            ('model', lr)])
+            ('model', self.model)])
         
         # Initialize tuner
         self.cgscv = stms.CustomGridSearchCV(
