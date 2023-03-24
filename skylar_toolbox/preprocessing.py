@@ -2,12 +2,155 @@
 # Load libraries
 # =============================================================================
 
+import numpy as np
 import pandas as pd
+from feature_engine import datetime as fedt
 from feature_engine import encoding as feeg
 from feature_engine import outliers as feos
 from sklearn import linear_model as snlm
+from sklearn import model_selection as snmos
 from sklearn import pipeline as snpe
 from skylar_toolbox import model_selection as stms
+
+# =============================================================================
+# DatetimeFeaturesTuner
+# =============================================================================
+
+class DatetimeFeaturesTuner:
+    def __init__(
+        self, 
+        model_type_sr: str, 
+        cv,
+        date_part_type_sr: str,
+        model = None):
+        '''
+        Tunes `features_to_extract` for fedt.DatetimeFeatures()
+
+        Parameters
+        ----------
+        model_type_sr : str
+            Model type.
+        cv : TYPE
+            Method of cross-validating.
+        date_part_type_sr : str
+            Date part type.
+        model : TYPE, optional
+            Model. The default is None.
+
+        Raises
+        ------
+        NotImplementedError
+            Implemented values of model_type_sr are ['classification', 'regression']
+            Implemented values of date_part_type_sr are ['sub-year', 'sub-week']
+
+        Returns
+        -------
+        None.
+
+        '''
+        implemented_model_types_lt = ['classification', 'regression']
+        if model_type_sr not in implemented_model_types_lt:
+            raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
+        self.model_type_sr = model_type_sr
+        self.cv = cv
+        implemented_date_part_types_lt = ['sub-year', 'sub-week']
+        if date_part_type_sr not in implemented_date_part_types_lt:
+            raise NotImplementedError(f'Implemented values of date_part_type_sr are {implemented_date_part_types_lt}')
+        self.date_part_type_sr = date_part_type_sr
+        if model is None:
+            self.model = snlm.LogisticRegression(penalty=None) if self.model_type_sr == 'classification' \
+                else snlm.LinearRegression()
+        else:
+            self.model = model
+    
+    def fit(
+        self, 
+        X: pd.DataFrame, 
+        y: pd.Series):
+        '''
+        Tunes and stores metadata
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Initialize pipeline
+        pe = snpe.Pipeline(steps=[
+            ('extract', fedt.DatetimeFeatures()),
+            ('encode', feeg.OneHotEncoder(ignore_format=True)),
+            ('model', self.model)])
+        
+        # Initialize tuner
+        if self.date_part_type_sr == 'sub-year':
+            features_to_extract_lt = [['semester'], ['quarter'], ['month'], ['week']]
+        elif self.date_part_type_sr == 'sub-week':
+            features_to_extract_lt = [['weekend'], ['day_of_week']]
+        self.gscv = snmos.GridSearchCV(
+            estimator=pe, 
+            param_grid=dict(extract__features_to_extract=features_to_extract_lt),
+            scoring='roc_auc' if self.model_type_sr == 'classification' else 'r2',
+            cv=self.cv,
+            refit=True, 
+            verbose=3, 
+            return_train_score=True)
+    
+        # Fit it
+        self.gscv.fit(X=X, y=y)
+        
+        # Get CV results
+        self.cv_results_df = pd.DataFrame(data=self.gscv.cv_results_)
+        
+        # Get params
+        self.params_lt = list(self.gscv.param_grid.keys())
+        self.columns_lt = [f'param_{param_sr}' for param_sr in self.params_lt]
+        
+        # Get plot data
+        self.plot_df = self._get_plot_data()
+        return self
+    
+    def plot_scores_v_param(self):
+        '''
+        Plots train and test scores against parameter values
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        ax = self.plot_df.plot(y='mean_train_score', yerr='se2_train_score')
+        self.plot_df.plot(y='mean_test_score', yerr='se2_test_score', ax=ax)
+        fig = ax.figure
+        return fig
+    
+    def _get_plot_data(self):
+        '''
+        Gets plot data
+
+        Returns
+        -------
+        plot_df : pd.DataFrame
+            Plot data.
+
+        '''
+        plot_df = (
+            self.cv_results_df
+            .set_index(keys=self.columns_lt)
+            .loc[:, ['mean_train_score', 'std_train_score', 'mean_test_score', 'std_test_score']]
+            .assign(
+                se2_train_score = lambda x: 2 * x['std_train_score'] / np.sqrt(self.gscv.n_splits_),
+                se2_test_score = lambda x: 2 * x['std_test_score'] / np.sqrt(self.gscv.n_splits_)))
+        return plot_df
+    
 
 # =============================================================================
 # RareLabelEncoderTuner
