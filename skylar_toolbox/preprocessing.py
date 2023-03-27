@@ -13,6 +13,50 @@ from sklearn import pipeline as snpe
 from skylar_toolbox import model_selection as stms
 
 # =============================================================================
+# cast_frame_to_string_and_clean
+# =============================================================================
+
+def cast_frame_to_string_and_clean(df: pd.DataFrame):
+    '''
+    Casts data frame to string and cleans
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input data frame.
+
+    Returns
+    -------
+    cleaned_casted_df : pd.DataFrame
+        Output data frame.
+
+    '''
+    cleaned_casted_df = df.apply(func=cast_series_to_string_and_clean)
+    return cleaned_casted_df
+
+# =============================================================================
+# cast_series_to_string_and_clean
+# =============================================================================
+
+def cast_series_to_string_and_clean(ss: pd.Series):
+    '''
+    Casts series to string and cleans
+
+    Parameters
+    ----------
+    ss : pd.Series
+        Input series.
+
+    Returns
+    -------
+    cleaned_casted_ss : pd.Series
+        Output series.
+
+    '''
+    cleaned_casted_ss = ss.astype(dtype=str).str.lower().str.strip()
+    return cleaned_casted_ss
+
+# =============================================================================
 # DatetimeFeaturesTuner
 # =============================================================================
 
