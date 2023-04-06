@@ -107,16 +107,44 @@ def print_sequence(
         f'{index_it:0{len_len_it}d}. {element}' 
         for index_it, element in enumerate(iterable=sequence))
     print(f'{name_sr} ({len_it}):\n{sequence_sr}')
+    
+# =============================================================================
+# return_memory
+# =============================================================================
+    
+def return_memory(
+        df: pd.DataFrame, 
+        unit_sr: str):
+    '''
+    Returns memory for data frame
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data frame.
+    unit_sr : str
+        Unit.
+
+    Returns
+    -------
+    memory_ft : float
+        Memory float.
+    memory_sr : str
+        Memory string.
+
+    '''
+    memory_ft, memory_sr = convert_bytes(input_bytes_it=df.memory_usage().sum(), unit_sr=unit_sr)
+    return memory_ft, memory_sr
 
 # =============================================================================
-# time_method
+# time_callable
 # =============================================================================
 
-def time_method(method):
-    def wrap_method(*pargs, **kwargs):
+def time_callable(callable_):
+    def wrap_callable(*pargs, **kwargs):
         start_ft = time.perf_counter()
-        result = method(*pargs, **kwargs)
+        result = callable_(*pargs, **kwargs)
         end_ft = time.perf_counter()
-        print(f'{method.__qualname__} - {de.timedelta(seconds=end_ft - start_ft)}')
+        print(f'{callable_.__qualname__} - {de.timedelta(seconds=end_ft - start_ft)}')
         return result
-    return wrap_method
+    return wrap_callable
