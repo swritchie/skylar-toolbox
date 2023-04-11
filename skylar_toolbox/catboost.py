@@ -2489,12 +2489,10 @@ def get_parameters(
     '''
     general_defaults_dt = {
         'cat_features': [],
-        'early_stopping_rounds': 100,
         'iterations': 1_000,
         'monotone_constraints': {},
         'random_seed': 0,
-        'task_type': 'CPU',
-        'use_best_model': True}
+        'task_type': 'CPU'}
     implemented_model_types_lt = ['classification', 'regression']
     if model_type_sr == 'classification':
         model_defaults_dt = {
