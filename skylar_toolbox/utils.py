@@ -55,7 +55,7 @@ def convert_bytes(
 
 def convert_types(df: pd.DataFrame):
     '''
-    Converts types to those that are more appropriate (e.g., bool) or require less memory
+    Converts types to those that require less memory
 
     Parameters
     ----------
@@ -69,11 +69,7 @@ def convert_types(df: pd.DataFrame):
 
     '''
     for column_sr in tqdm.tqdm(iterable=df.columns):
-        if set(df[column_sr].unique()) == {0, 1}:
-            df[column_sr] = df[column_sr].astype(dtype=bool)
-        elif df[column_sr].dtype == 'object':
-            df[column_sr] = df[column_sr].astype(dtype='category')
-        elif df[column_sr].dtype == float:
+        if df[column_sr].dtype == float:
             df[column_sr] = df[column_sr].astype(dtype=np.float32)
         elif df[column_sr].dtype == int:
             df[column_sr] = df[column_sr].astype(dtype=np.int32)
