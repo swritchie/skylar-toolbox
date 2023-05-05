@@ -2510,7 +2510,7 @@ def get_parameters(
     else:
         raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
     general_defaults_dt.update(cat_boost_dt)
-    general_defaults_dt['early_stopping_rounds'] = general_defaults_dt['early_stopping_rounds'] // 10
+    general_defaults_dt['early_stopping_rounds'] = general_defaults_dt['iterations'] // 10
     general_defaults_dt['verbose'] = general_defaults_dt['iterations'] // 10
     return general_defaults_dt
     
