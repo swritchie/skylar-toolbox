@@ -2,6 +2,7 @@
 # Load libraries
 # =============================================================================
 
+import numpy as np
 import pandas as pd
 import seaborn as sns; sns.set()
 from matplotlib import pyplot as plt
@@ -177,4 +178,38 @@ class CustomGridSearchCV:
             .reset_index())
         return scores_df
     
+# =============================================================================
+# CustomPredefinedSplit
+# =============================================================================
     
+class CustomPredefinedSplit:
+    def __init__(self):
+        pass
+    
+    def split(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series = None):
+        '''
+        Splits data frame into arrays of train and test indexes
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series, optional
+            Target vector. The default is None.
+
+        Yields
+        ------
+        train_ay : TYPE
+            Train indexes.
+        test_ay : TYPE
+            Test indexes.
+
+        '''
+        train_ix = X.query(expr='split == "train"').index
+        test_ix = X.index.difference(other=train_ix)
+        train_ay = np.array(object=[X.index.get_loc(key=ix_it) for ix_it in train_ix])
+        test_ay = np.array(object=[X.index.get_loc(key=ix_it) for ix_it in test_ix])
+        yield train_ay, test_ay
