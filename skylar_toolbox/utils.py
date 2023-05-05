@@ -68,13 +68,13 @@ def convert_types(df: pd.DataFrame):
         Data frame.
 
     '''
-    print('Memory: {}'.format(stus.convert_bytes(input_bytes_it=df.memory_usage().sum().sum(), unit_sr='MB')[1]))
+    print('Memory: {}'.format(convert_bytes(input_bytes_it=df.memory_usage().sum().sum(), unit_sr='MB')[1]))
     for column_sr in tqdm.tqdm(iterable=df.columns):
         if df[column_sr].dtype == float:
             df[column_sr] = df[column_sr].astype(dtype=np.float32)
         elif df[column_sr].dtype == int:
             df[column_sr] = df[column_sr].astype(dtype=np.int32)
-    print('Memory: {}'.format(stus.convert_bytes(input_bytes_it=df.memory_usage().sum().sum(), unit_sr='MB')[1]))
+    print('Memory: {}'.format(convert_bytes(input_bytes_it=df.memory_usage().sum().sum(), unit_sr='MB')[1]))
     return df
 
 # =============================================================================
