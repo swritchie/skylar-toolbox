@@ -53,7 +53,9 @@ def convert_bytes(
 # convert_types
 # =============================================================================
 
-def convert_types(df: pd.DataFrame):
+def convert_types(
+        df: pd.DataFrame, 
+        unit_sr: str = 'MB'):
     '''
     Converts types to those that require less memory
 
@@ -61,6 +63,8 @@ def convert_types(df: pd.DataFrame):
     ----------
     df : pd.DataFrame
         Data frame.
+    unit_sr : str, optional
+        Unit of memory. The default is 'MB'.
 
     Returns
     -------
@@ -68,13 +72,17 @@ def convert_types(df: pd.DataFrame):
         Data frame.
 
     '''
-    print('Memory: {}'.format(convert_bytes(input_bytes_it=df.memory_usage().sum().sum(), unit_sr='MB')[1]))
+    print('Memory: {}'.format(convert_bytes(
+        input_bytes_it=df.memory_usage().sum().sum(), 
+        unit_sr=unit_sr)[1]))
     for column_sr in tqdm.tqdm(iterable=df.columns):
         if df[column_sr].dtype == float:
             df[column_sr] = df[column_sr].astype(dtype=np.float32)
         elif df[column_sr].dtype == int:
             df[column_sr] = df[column_sr].astype(dtype=np.int32)
-    print('Memory: {}'.format(convert_bytes(input_bytes_it=df.memory_usage().sum().sum(), unit_sr='MB')[1]))
+    print('Memory: {}'.format(convert_bytes(
+        input_bytes_it=df.memory_usage().sum().sum(),
+        unit_sr=unit_sr)[1]))
     return df
 
 # =============================================================================
