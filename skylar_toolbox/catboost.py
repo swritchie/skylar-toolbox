@@ -61,7 +61,8 @@ class CustomCatBoost:
             X_train: pd.DataFrame, 
             y_train: pd.Series, 
             X_valid: pd.DataFrame, 
-            y_valid: pd.Series):
+            y_valid: pd.Series, 
+            fit_dt: dict = dict()):
         '''
         Fits model and stores metadata
 
@@ -75,6 +76,8 @@ class CustomCatBoost:
             Validation feature matrix.
         y_valid : pd.Series
             Validation target vector.
+        fit_dt : dict, optional
+            Fit params. The default is dict().
 
         Returns
         -------
@@ -83,7 +86,8 @@ class CustomCatBoost:
 
         '''
         # Fit model
-        self.cbm = cb.CatBoost(params=self.cat_boost_dt).fit(X=X_train, y=y_train, eval_set=(X_valid, y_valid))
+        self.cbm = cb.CatBoost(params=self.cat_boost_dt)
+        self.cbm.fit(X=X_train, y=y_train, eval_set=(X_valid, y_valid), **fit_dt)
         
         # Get evals result
         self.evals_result_df = self._get_evals_result()
@@ -492,7 +496,8 @@ class CustomCatBoostCV:
     def fit(
             self, 
             X: pd.DataFrame, 
-            y: pd.Series):
+            y: pd.Series, 
+            fit_dt: dict = dict()):
         '''
         Fits model and stores metadata
 
@@ -502,6 +507,8 @@ class CustomCatBoostCV:
             Feature matrix.
         y : pd.Series
             Target vector.
+        fit_dt : dict, optional
+            Fit params. The default is dict().
 
         Returns
         -------
@@ -535,7 +542,8 @@ class CustomCatBoostCV:
                 X_train=X.iloc[train_ay, :],
                 y_train=y.iloc[train_ay], 
                 X_valid=X.iloc[test_ay, :], 
-                y_valid=y.iloc[test_ay])
+                y_valid=y.iloc[test_ay], 
+                fit_dt=fit_dt)
             self.models_lt.append(ccb)
         
         # Compare eval metrics
@@ -1031,7 +1039,8 @@ class ExampleSelector:
     def fit(
             self,
             X: pd.DataFrame,
-            y: pd.Series):
+            y: pd.Series,
+            fit_dt: dict = dict()):
         '''
         Fits models, stores metadata, and drops examples
 
@@ -1041,6 +1050,8 @@ class ExampleSelector:
             Feature matrix.
         y : pd.Series
             Target vector.
+        fit_dt : dict, optional
+            Fit params. The default is dict().
 
         Returns
         -------
@@ -1070,7 +1081,7 @@ class ExampleSelector:
 
             # Fit model
             ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
-            ccbcv.fit(X=X, y=y)
+            ccbcv.fit(X=X, y=y, fit_dt=fit_dt)
             if self.store_models_bl:
                 self.models_lt.append(ccbcv)
 
@@ -2075,7 +2086,8 @@ class FeatureSelector:
     def fit(
             self, 
             X: pd.DataFrame, 
-            y: pd.Series):
+            y: pd.Series,
+            fit_dt: dict = dict()):
         '''
         Fits models, stores metadata, and drops features
 
@@ -2085,6 +2097,8 @@ class FeatureSelector:
             Feature matrix.
         y : pd.Series
             Target vector.
+        fit_dt : dict, optional
+            Fit params. The default is dict().
 
         Returns
         -------
@@ -2113,7 +2127,7 @@ class FeatureSelector:
             
             # Fit model
             ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
-            ccbcv.fit(X=X, y=y)
+            ccbcv.fit(X=X, y=y, fit_dt=fit_dt)
             if self.store_models_bl:
                 self.models_lt.append(ccbcv)
             
