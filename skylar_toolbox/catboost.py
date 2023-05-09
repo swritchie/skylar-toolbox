@@ -88,7 +88,10 @@ class CustomCatBoost:
         # Fit model
         self.cbm = cb.CatBoost(params=self.cat_boost_dt)
         self.cbm.fit(X=X_train, y=y_train, eval_set=(X_valid, y_valid), **fit_dt)
-        
+
+        # Save best iteration
+        self.best_iteration_it = self.cbm.best_iteration_
+
         # Get evals result
         self.evals_result_df = self._get_evals_result()
         
@@ -2508,6 +2511,7 @@ def get_parameters(
         'random_seed': 0,
         'task_type': 'CPU', 
         'use_best_model': True}
+    general_defaults_dt['early_stopping_rounds'] = general_defaults_dt['iterations'] // 10
     implemented_model_types_lt = ['classification', 'regression']
     if model_type_sr == 'classification':
         model_defaults_dt = {
@@ -2524,7 +2528,6 @@ def get_parameters(
     else:
         raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
     general_defaults_dt.update(cat_boost_dt)
-    general_defaults_dt['early_stopping_rounds'] = general_defaults_dt['iterations'] // 10
     general_defaults_dt['verbose'] = general_defaults_dt['iterations'] // 10
     return general_defaults_dt
     
