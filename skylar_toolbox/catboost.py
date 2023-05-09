@@ -88,7 +88,10 @@ class CustomCatBoost:
         # Fit model
         self.cbm = cb.CatBoost(params=self.cat_boost_dt)
         self.cbm.fit(X=X_train, y=y_train, eval_set=(X_valid, y_valid), **fit_dt)
-        
+
+        # Save best iteration
+        self.best_iteration_it = self.cbm.best_iteration_
+
         # Get evals result
         self.evals_result_df = self._get_evals_result()
         
