@@ -2506,7 +2506,7 @@ def get_parameters(
     '''
     general_defaults_dt = {
         'cat_features': [],
-        'iterations': 10_000,
+        'iterations': 1_000,
         'monotone_constraints': {},
         'random_seed': 0,
         'task_type': 'CPU', 
