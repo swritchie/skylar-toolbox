@@ -2506,24 +2506,22 @@ def get_parameters(
     '''
     general_defaults_dt = {
         'cat_features': [],
+        'early_stopping_rounds': 100,
         'iterations': 1_000,
         'monotone_constraints': {},
         'random_seed': 0,
         'task_type': 'CPU', 
         'use_best_model': True}
-    general_defaults_dt['early_stopping_rounds'] = general_defaults_dt['iterations'] // 10
     implemented_model_types_lt = ['classification', 'regression']
     if model_type_sr == 'classification':
         model_defaults_dt = {
             'loss_function': 'Logloss',
-            'eval_metric': 'AUC',
-            'custom_metric': ['Logloss', 'AUC', 'PRAUC', 'F1', 'Precision', 'Recall']}
+            'custom_metric': ['Logloss', 'AUC', 'Precision', 'Recall']}
         general_defaults_dt.update(model_defaults_dt)
     elif model_type_sr == 'regression':
         model_defaults_dt = {
             'loss_function': 'RMSE',
-            'eval_metric': 'R2',
-            'custom_metric': ['RMSE', 'R2', 'MSLE', 'MAE', 'MAPE', 'MedianAbsoluteError']}
+            'custom_metric': ['RMSE', 'R2', 'MAE', 'MAPE']}
         general_defaults_dt.update(model_defaults_dt)
     else:
         raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
