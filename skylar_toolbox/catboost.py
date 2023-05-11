@@ -982,11 +982,11 @@ class ExampleSelector:
             model_type_sr: str,
             cat_boost_dt: dict,
             sklearn_splitter,
-            objective_sr: str,
-            losses_nlargest_n_it: int,
-            example_importances_nlargest_n_it: int,
-            wait_it: int,
-            store_models_bl: bool = True):
+            objective_sr: str = 'minimize',
+            losses_nlargest_n_it: int = 1_000,
+            example_importances_nlargest_n_it: int = 100,
+            wait_it: int = 10,
+            store_models_bl: bool = False):
         '''
         Selects examples by iteratively removing those with highest validation losses
 
@@ -998,16 +998,16 @@ class ExampleSelector:
             Parameters passed to CatBoost.
         sklearn_splitter : TYPE
             Splitter from scikit-learn.
-        objective_sr : str
-            Objective for eval metric.
-        losses_nlargest_n_it : int
-            Number of validation examples to use for train example importances.
-        example_importances_nlargest_n_it : int
-            Number of train examples to drop.
-        wait_it : int
-            Number of iterations to wait before terminating procedure.
+        objective_sr : str, optional
+            Objective for eval metric. The default is 'minimize'.
+        losses_nlargest_n_it : int, optional
+            Number of validation examples to use for train example importances. The default is 1_000.
+        example_importances_nlargest_n_it : int, optional
+            Number of train examples to drop. The default is 100.
+        wait_it : int, optional
+            Number of iterations to wait before terminating procedure. The default is 10.
         store_models_bl : bool, optional
-            Flag for whether to store during procedure to save memory. The default is True.
+            Flag for whether to store during procedure to save memory. The default is False.
 
         Raises
         ------
