@@ -2047,7 +2047,7 @@ class FeatureSelector:
         wait_it : int, optional
             Number of iterations to wait before terminating procedure. The default is 10.
         store_models_bl : bool, optional
-            Flag for whether to store during procedure to save memory. The default is True.
+            Flag for whether to store during procedure to save memory. The default is False.
         losses_nsmallest_n_it : int, optional
             Number of features to drop. The default is 1.
 
