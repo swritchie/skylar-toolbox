@@ -2516,11 +2516,13 @@ def get_parameters(
     if model_type_sr == 'classification':
         model_defaults_dt = {
             'loss_function': 'Logloss',
+            'eval_metric': 'Logloss',
             'custom_metric': ['Logloss', 'AUC', 'Precision', 'Recall']}
         general_defaults_dt.update(model_defaults_dt)
     elif model_type_sr == 'regression':
         model_defaults_dt = {
             'loss_function': 'RMSE',
+            'eval_metric': 'RMSE',
             'custom_metric': ['RMSE', 'R2', 'MAE', 'MAPE']}
         general_defaults_dt.update(model_defaults_dt)
     else:
