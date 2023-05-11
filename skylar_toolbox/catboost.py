@@ -1046,7 +1046,8 @@ class ExampleSelector:
             self,
             X: pd.DataFrame,
             y: pd.Series,
-            fit_dt: dict = dict()):
+            fit_dt: dict = dict(), 
+            split_dt: dict = dict()):
         '''
         Fits models, stores metadata, and drops examples
 
@@ -1058,6 +1059,8 @@ class ExampleSelector:
             Target vector.
         fit_dt : dict, optional
             Fit params. The default is dict().
+        split_dt : dict, optional
+            Split params (e.g., groups). The default is dict().
 
         Returns
         -------
@@ -1087,7 +1090,7 @@ class ExampleSelector:
 
             # Fit model
             ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
-            ccbcv.fit(X=X, y=y, fit_dt=fit_dt)
+            ccbcv.fit(X=X, y=y, fit_dt=fit_dt, split_dt=split_dt)
             if self.store_models_bl:
                 self.models_lt.append(ccbcv)
 
