@@ -500,7 +500,8 @@ class CustomCatBoostCV:
             self, 
             X: pd.DataFrame, 
             y: pd.Series, 
-            fit_dt: dict = dict()):
+            fit_dt: dict = dict(), 
+            split_dt: dict = dict()):
         '''
         Fits model and stores metadata
 
@@ -512,6 +513,8 @@ class CustomCatBoostCV:
             Target vector.
         fit_dt : dict, optional
             Fit params. The default is dict().
+        split_dt : dict, optional
+            Split params (e.g., groups). The default is dict().
 
         Returns
         -------
@@ -526,7 +529,7 @@ class CustomCatBoostCV:
         # Initialize
         self.models_lt = []
         
-        for index_it, (train_ay, test_ay) in enumerate(iterable=self.sklearn_splitter.split(X=X, y=y)):
+        for index_it, (train_ay, test_ay) in enumerate(iterable=self.sklearn_splitter.split(X=X, y=y, **split_dt)):
             # Log
             print('-' * 80)
             print(f'Split: {index_it}')
