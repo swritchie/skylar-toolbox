@@ -500,7 +500,8 @@ class CustomCatBoostCV:
             self, 
             X: pd.DataFrame, 
             y: pd.Series, 
-            fit_dt: dict = dict()):
+            fit_dt: dict = dict(), 
+            split_dt: dict = dict()):
         '''
         Fits model and stores metadata
 
@@ -512,6 +513,8 @@ class CustomCatBoostCV:
             Target vector.
         fit_dt : dict, optional
             Fit params. The default is dict().
+        split_dt : dict, optional
+            Split params (e.g., groups). The default is dict().
 
         Returns
         -------
@@ -526,7 +529,7 @@ class CustomCatBoostCV:
         # Initialize
         self.models_lt = []
         
-        for index_it, (train_ay, test_ay) in enumerate(iterable=self.sklearn_splitter.split(X=X, y=y)):
+        for index_it, (train_ay, test_ay) in enumerate(iterable=self.sklearn_splitter.split(X=X, y=y, **split_dt)):
             # Log
             print('-' * 80)
             print(f'Split: {index_it}')
@@ -2511,7 +2514,8 @@ def get_parameters(
         'monotone_constraints': {},
         'random_seed': 0,
         'task_type': 'CPU', 
-        'use_best_model': True}
+        'use_best_model': True, 
+        'verbose': 100}
     implemented_model_types_lt = ['classification', 'regression']
     if model_type_sr == 'classification':
         model_defaults_dt = {
@@ -2528,6 +2532,5 @@ def get_parameters(
     else:
         raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
     general_defaults_dt.update(cat_boost_dt)
-    general_defaults_dt['verbose'] = general_defaults_dt['iterations'] // 10
     return general_defaults_dt
     
