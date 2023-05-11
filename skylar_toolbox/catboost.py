@@ -2514,7 +2514,8 @@ def get_parameters(
         'monotone_constraints': {},
         'random_seed': 0,
         'task_type': 'CPU', 
-        'use_best_model': True}
+        'use_best_model': True, 
+        'verbose': 100}
     implemented_model_types_lt = ['classification', 'regression']
     if model_type_sr == 'classification':
         model_defaults_dt = {
@@ -2531,6 +2532,5 @@ def get_parameters(
     else:
         raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
     general_defaults_dt.update(cat_boost_dt)
-    general_defaults_dt['verbose'] = general_defaults_dt['iterations'] // 10
     return general_defaults_dt
     
