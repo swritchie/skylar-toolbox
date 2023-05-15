@@ -6,20 +6,23 @@ import numpy as np
 import pandas as pd
 
 # =============================================================================
-# describe_features
+# describe
 # =============================================================================
 
-def describe_features(df: pd.DataFrame):
+def describe(df: pd.DataFrame):
     '''
-    Describes feature matrix
+    Describes
+
     Parameters
     ----------
     df : pd.DataFrame
-        Feature matrix
+        Data frame
+
     Returns
     -------
     description_df : pd.DataFrame
         Description
+
     '''
     numeric_description_df = (
         df
