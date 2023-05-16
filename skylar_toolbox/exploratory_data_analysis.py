@@ -38,6 +38,7 @@ def describe(df: pd.DataFrame):
         df.nunique().rename(index='nunique'),
         df.apply(func=lambda x: x.value_counts().nlargest().index.tolist()).rename(index='top_values'),
         df.isna().mean().rename(index='pct_missing'),
+        df.isin(values=[-np.inf, np.inf]).sum().rename(index='cnt_inf'),
         numeric_description_df
     ], axis=1)
     description_df.sort_values(by=['dtypes', 'nunique'], inplace=True)
