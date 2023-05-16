@@ -655,6 +655,7 @@ class CustomCatBoostCV:
             data_df = ys_df.describe().round(decimals=3)
             ax = ys_df.plot(yerr=yerrs_df)
             ax.set(xticks=[])
+            ax.axhline(y=0, c='k', ls=':')
             pd.plotting.table(ax=ax, data=data_df, bbox=[1.25, 0, 0.5, 1])
             fig = ax.figure
             return fig
