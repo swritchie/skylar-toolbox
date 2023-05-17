@@ -990,7 +990,7 @@ class ExampleSelector:
             losses_nlargest_n_it: int = 1_000,
             example_importances_nlargest_n_it: int = 100,
             wait_it: int = 10,
-            store_models_bl: bool = False):
+            store_models_bl: bool = True):
         '''
         Selects examples by iteratively removing those with highest validation losses
 
@@ -1011,7 +1011,7 @@ class ExampleSelector:
         wait_it : int, optional
             Number of iterations to wait before terminating procedure. The default is 10.
         store_models_bl : bool, optional
-            Flag for whether to store during procedure to save memory. The default is False.
+            Flag for whether to store during procedure to save memory. The default is True.
 
         Raises
         ------
@@ -2034,7 +2034,7 @@ class FeatureSelector:
             objective_sr: str = 'minimize', 
             strategy_sr: str = 'drop_negative_means', 
             wait_it: int = 10, 
-            store_models_bl: bool = False,
+            store_models_bl: bool = True,
             losses_nsmallest_n_it: int = 1):
         '''
         Selects features by iteratively removing those with highest validation losses
@@ -2054,7 +2054,7 @@ class FeatureSelector:
         wait_it : int, optional
             Number of iterations to wait before terminating procedure. The default is 10.
         store_models_bl : bool, optional
-            Flag for whether to store during procedure to save memory. The default is False.
+            Flag for whether to store during procedure to save memory. The default is True.
         losses_nsmallest_n_it : int, optional
             Number of features to drop. The default is 1.
 
