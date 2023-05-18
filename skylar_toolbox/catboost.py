@@ -751,6 +751,56 @@ class CustomCatBoostCV:
         return feature_importances_df
     
 # =============================================================================
+# DifferenceCallback
+# =============================================================================
+
+class DifferenceCallback:
+    def __init__(
+        self, 
+        metric_sr: str, 
+        threshold_ft: float = 0.01):
+        '''
+        Stops training when difference between learn and validation metrics surpasses threshold
+
+        Parameters
+        ----------
+        metric_sr : str
+            Metric.
+        threshold_ft : float, optional
+            Threshold. The default is 0.01.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.metric_sr = metric_sr
+        self.threshold_ft = threshold_ft
+    
+    def after_iteration(
+            self, 
+            info):
+        '''
+        Checks whether to stop
+
+        Parameters
+        ----------
+        info : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        continue_bl : bool
+            Flag for whether to continue.
+
+        '''
+        learn_metric_ft = info.metrics['learn'][self.metric_sr][-1]
+        validation_metric_ft = info.metrics['validation'][self.metric_sr][-1]
+        difference_ft = validation_metric_ft - learn_metric_ft
+        continue_bl = difference_ft < self.threshold_ft
+        return continue_bl
+
+# =============================================================================
 # ExampleInspector
 # =============================================================================
     
@@ -758,7 +808,7 @@ class ExampleInspector:
     def __init__(
             self, 
             ccbcv: CustomCatBoostCV, 
-            losses_nlargest_n_it: int):
+            losses_nlargest_n_it: int = 1_000):
         '''
         Gets losses and importances (of train on validation) per example
 
@@ -766,8 +816,8 @@ class ExampleInspector:
         ----------
         ccbcv : CustomCatBoostCV
             Cross-validated model.
-        losses_nlargest_n_it : int
-            Number of validation examples to use for train example importances.
+        losses_nlargest_n_it : int, optional
+            Number of validation examples to use for train example importances. The default is 1_000.
 
         Returns
         -------
@@ -1135,14 +1185,14 @@ class ExampleSelector:
 
     def weight_ranks(
             self,
-            weights_dt: dict):
+            weights_dt: dict = {'scores': 1, 'pct_diffs': 0, 'cnt_examples': 0}):
         '''
         Creates new combined rank by weighting components
 
         Parameters
         ----------
-        weights_dt : dict
-            Weights.
+        weights_dt : dict, optional
+            Weights. The default is {'scores': 1, 'pct_diffs': 0, 'cnt_examples': 0}.
 
         Raises
         ------
@@ -2032,7 +2082,7 @@ class FeatureSelector:
             cat_boost_dt: dict, 
             sklearn_splitter, 
             objective_sr: str = 'minimize', 
-            strategy_sr: str = 'drop_negative_means', 
+            strategy_sr: str = 'drop_nonpositive_means', 
             wait_it: int = 10, 
             store_models_bl: bool = True,
             losses_nsmallest_n_it: int = 1):
@@ -2065,7 +2115,7 @@ class FeatureSelector:
         ValueError
             Permitted values of objective_sr are ['minimize', 'maximize']
         NotImplementedError
-            Implemented values of strategy_sr are ['drop_negative_means', 'drop_negative_ucis', 'drop_nsmallest_means']
+            Implemented values of strategy_sr are ['drop_nonpositive_means', 'drop_negative_means', 'drop_nsmallest_means']
 
         Returns
         -------
@@ -2085,7 +2135,7 @@ class FeatureSelector:
         self.objective_sr = objective_sr
         self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
         self.best_iteration_it = 0
-        implemented_strategies_lt = ['drop_negative_means', 'drop_negative_ucis', 'drop_nsmallest_means']
+        implemented_strategies_lt = ['drop_nonpositive_means', 'drop_negative_means', 'drop_nsmallest_means']
         if strategy_sr not in implemented_strategies_lt:
             raise NotImplementedError(f'Implemented values of strategy_sr are {implemented_strategies_lt}')
         self.strategy_sr = strategy_sr
@@ -2178,14 +2228,14 @@ class FeatureSelector:
 
     def weight_ranks(
             self, 
-            weights_dt: dict):
+            weights_dt: dict = {'scores': 1, 'pct_diffs': 0, 'cnt_features': 0}):
         '''
         Creates new combined rank by weighting components
 
         Parameters
         ----------
-        weights_dt : dict
-            Weights.
+        weights_dt : dict, optional
+            Weights. The default is {'scores': 1, 'pct_diffs': 0, 'cnt_features': 0}.
 
         Raises
         ------
@@ -2366,10 +2416,10 @@ class FeatureSelector:
 
         '''
         features_ix = X.columns
-        if self.strategy_sr == 'drop_negative_means':
+        if self.strategy_sr == 'drop_nonpositive_means':
+            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
+        elif self.strategy_sr == 'drop_negative_means':
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean < 0').index
-        elif self.strategy_sr == 'drop_negative_ucis':
-            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_uci < 0').index
         elif self.strategy_sr == 'drop_nsmallest_means':
             drop_ix = ccbcv.lfc_feature_importances_df['validation_mean'].nsmallest(n=self.losses_nsmallest_n_it).index
         keep_ix = features_ix.difference(other=drop_ix)
