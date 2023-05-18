@@ -2082,7 +2082,7 @@ class FeatureSelector:
             cat_boost_dt: dict, 
             sklearn_splitter, 
             objective_sr: str = 'minimize', 
-            strategy_sr: str = 'drop_nonpositive_means', 
+            strategy_sr: str = 'drop_negative_means', 
             wait_it: int = 10, 
             store_models_bl: bool = True,
             losses_nsmallest_n_it: int = 1):
