@@ -2082,7 +2082,7 @@ class FeatureSelector:
             cat_boost_dt: dict, 
             sklearn_splitter, 
             objective_sr: str = 'minimize', 
-            strategy_sr: str = 'drop_negative_means', 
+            strategy_sr: str = 'drop_nonpositive_means', 
             wait_it: int = 10, 
             store_models_bl: bool = True,
             losses_nsmallest_n_it: int = 1):
@@ -2115,7 +2115,7 @@ class FeatureSelector:
         ValueError
             Permitted values of objective_sr are ['minimize', 'maximize']
         NotImplementedError
-            Implemented values of strategy_sr are ['drop_negative_means', 'drop_negative_ucis', 'drop_nsmallest_means']
+            Implemented values of strategy_sr are ['drop_nonpositive_means', 'drop_negative_means', 'drop_nsmallest_means']
 
         Returns
         -------
@@ -2135,7 +2135,7 @@ class FeatureSelector:
         self.objective_sr = objective_sr
         self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
         self.best_iteration_it = 0
-        implemented_strategies_lt = ['drop_negative_means', 'drop_negative_ucis', 'drop_nsmallest_means']
+        implemented_strategies_lt = ['drop_nonpositive_means', 'drop_negative_means', 'drop_nsmallest_means']
         if strategy_sr not in implemented_strategies_lt:
             raise NotImplementedError(f'Implemented values of strategy_sr are {implemented_strategies_lt}')
         self.strategy_sr = strategy_sr
@@ -2416,10 +2416,10 @@ class FeatureSelector:
 
         '''
         features_ix = X.columns
-        if self.strategy_sr == 'drop_negative_means':
+        if self.strategy_sr == 'drop_nonpositive_means':
+            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
+        elif self.strategy_sr == 'drop_negative_means':
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean < 0').index
-        elif self.strategy_sr == 'drop_negative_ucis':
-            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_uci < 0').index
         elif self.strategy_sr == 'drop_nsmallest_means':
             drop_ix = ccbcv.lfc_feature_importances_df['validation_mean'].nsmallest(n=self.losses_nsmallest_n_it).index
         keep_ix = features_ix.difference(other=drop_ix)
