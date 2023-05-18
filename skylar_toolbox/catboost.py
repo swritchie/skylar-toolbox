@@ -808,7 +808,7 @@ class ExampleInspector:
     def __init__(
             self, 
             ccbcv: CustomCatBoostCV, 
-            losses_nlargest_n_it: int):
+            losses_nlargest_n_it: int = 1_000):
         '''
         Gets losses and importances (of train on validation) per example
 
@@ -816,8 +816,8 @@ class ExampleInspector:
         ----------
         ccbcv : CustomCatBoostCV
             Cross-validated model.
-        losses_nlargest_n_it : int
-            Number of validation examples to use for train example importances.
+        losses_nlargest_n_it : int, optional
+            Number of validation examples to use for train example importances. The default is 1_000.
 
         Returns
         -------
