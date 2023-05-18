@@ -1185,14 +1185,14 @@ class ExampleSelector:
 
     def weight_ranks(
             self,
-            weights_dt: dict):
+            weights_dt: dict = {'scores': 1, 'pct_diffs': 0, 'cnt_examples': 0}):
         '''
         Creates new combined rank by weighting components
 
         Parameters
         ----------
-        weights_dt : dict
-            Weights.
+        weights_dt : dict, optional
+            Weights. The default is {'scores': 1, 'pct_diffs': 0, 'cnt_examples': 0}.
 
         Raises
         ------
