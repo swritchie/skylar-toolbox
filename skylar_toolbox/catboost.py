@@ -564,14 +564,14 @@ class CustomCatBoostCV:
     
     def sum_models(
             self, 
-            strategy_sr: str):
+            strategy_sr: str = 'weight_equally'):
         '''
         Ensembles models trained on different subsets of data
 
         Parameters
         ----------
-        strategy_sr : str
-            Strategy for weighting models in ensemble.
+        strategy_sr : str, optional
+            Strategy for weighting models in ensemble. The default is 'weight equally'.
 
         Raises
         ------
