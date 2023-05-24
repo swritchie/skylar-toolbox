@@ -2115,7 +2115,7 @@ class FeatureSelector:
         ValueError
             Permitted values of objective_sr are ['minimize', 'maximize']
         NotImplementedError
-            Implemented values of strategy_sr are ['drop_nonpositive_means', 'drop_negative_means', 'drop_nsmallest_means']
+            Implemented values of strategy_sr are ['drop_nonpositive_means', 'drop_negative_means', 'drop_negative_ucis', 'drop_nsmallest_means']
 
         Returns
         -------
@@ -2135,7 +2135,7 @@ class FeatureSelector:
         self.objective_sr = objective_sr
         self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
         self.best_iteration_it = 0
-        implemented_strategies_lt = ['drop_nonpositive_means', 'drop_negative_means', 'drop_nsmallest_means']
+        implemented_strategies_lt = ['drop_nonpositive_means', 'drop_negative_means', 'drop_negative_ucis', 'drop_nsmallest_means']
         if strategy_sr not in implemented_strategies_lt:
             raise NotImplementedError(f'Implemented values of strategy_sr are {implemented_strategies_lt}')
         self.strategy_sr = strategy_sr
@@ -2417,9 +2417,13 @@ class FeatureSelector:
         '''
         features_ix = X.columns
         if self.strategy_sr == 'drop_nonpositive_means':
-            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
+            drop_ix = (
+                ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
+                .difference(other=ccbcv.cat_boost_dt['ignored_features']))
         elif self.strategy_sr == 'drop_negative_means':
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean < 0').index
+        elif self.strategy_sr == 'drop_negative_ucis':
+            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_uci < 0').index
         elif self.strategy_sr == 'drop_nsmallest_means':
             drop_ix = ccbcv.lfc_feature_importances_df['validation_mean'].nsmallest(n=self.losses_nsmallest_n_it).index
         keep_ix = features_ix.difference(other=drop_ix)
@@ -2567,6 +2571,7 @@ def get_parameters(
     general_defaults_dt = {
         'cat_features': [],
         'early_stopping_rounds': 100,
+        'ignored_features': [],
         'iterations': 1_000,
         'monotone_constraints': {},
         'random_seed': 0,
