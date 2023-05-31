@@ -442,13 +442,15 @@ class CustomCatBoost:
             Interaction strengths.
 
         '''
-        map_dt = {index_it: feature_sr for index_it, feature_sr in enumerate(iterable=self.cbm.feature_names_)}
-        interaction_strengths_df = (
-            pd.DataFrame(data=self.cbm.get_feature_importance(type='Interaction'))
-            .set_axis(labels=['first_features', 'second_features', 'strengths'], axis=1)
-            .assign(
-                first_features = lambda x: x['first_features'].map(arg=map_dt),
-                second_features = lambda x: x['second_features'].map(arg=map_dt)))
+        interaction_strengths_df = pd.DataFrame(data=self.cbm.get_feature_importance(type='Interaction'))
+        if interaction_strengths_df.shape[0] > 0:
+            map_dt = {index_it: feature_sr for index_it, feature_sr in enumerate(iterable=self.cbm.feature_names_)}
+            interaction_strengths_df = (
+                interaction_strengths_df 
+                .set_axis(labels=['first_features', 'second_features', 'strengths'], axis=1)
+                .assign(
+                    first_features = lambda x: x['first_features'].map(arg=map_dt),
+                    second_features = lambda x: x['second_features'].map(arg=map_dt)))
         return interaction_strengths_df
 
 # =============================================================================
@@ -2415,7 +2417,7 @@ class FeatureSelector:
             Feature to keep.
 
         '''
-        features_ix = X.columns.difference(other=ccbcv.cat_boost_dt['ignored_features'])
+        features_ix = X.columns
         if self.strategy_sr == 'drop_nonpositive_means':
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
         elif self.strategy_sr == 'drop_negative_means':
@@ -2424,6 +2426,7 @@ class FeatureSelector:
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_uci < 0').index
         elif self.strategy_sr == 'drop_nsmallest_means':
             drop_ix = ccbcv.lfc_feature_importances_df['validation_mean'].nsmallest(n=self.losses_nsmallest_n_it).index
+        drop_ix = drop_ix.difference(other=ccbcv.cat_boost_dt['ignored_features'])
         keep_ix = features_ix.difference(other=drop_ix)
         return features_ix, drop_ix, keep_ix
     
