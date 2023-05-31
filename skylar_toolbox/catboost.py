@@ -442,13 +442,15 @@ class CustomCatBoost:
             Interaction strengths.
 
         '''
-        map_dt = {index_it: feature_sr for index_it, feature_sr in enumerate(iterable=self.cbm.feature_names_)}
-        interaction_strengths_df = (
-            pd.DataFrame(data=self.cbm.get_feature_importance(type='Interaction'))
-            .set_axis(labels=['first_features', 'second_features', 'strengths'], axis=1)
-            .assign(
-                first_features = lambda x: x['first_features'].map(arg=map_dt),
-                second_features = lambda x: x['second_features'].map(arg=map_dt)))
+        interaction_strengths_df = pd.DataFrame(data=self.cbm.get_feature_importance(type='Interaction'))
+        if interaction_strengths_df.shape[0] > 0:
+            map_dt = {index_it: feature_sr for index_it, feature_sr in enumerate(iterable=self.cbm.feature_names_)}
+            interaction_strengths_df = (
+                interaction_strengths_df 
+                .set_axis(labels=['first_features', 'second_features', 'strengths'], axis=1)
+                .assign(
+                    first_features = lambda x: x['first_features'].map(arg=map_dt),
+                    second_features = lambda x: x['second_features'].map(arg=map_dt)))
         return interaction_strengths_df
 
 # =============================================================================
