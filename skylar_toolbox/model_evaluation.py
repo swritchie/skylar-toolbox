@@ -16,14 +16,25 @@ from skylar_toolbox import exploratory_data_analysis as steda
 class ClassificationEvaluator:
     def __init__(
             self, 
-            estimator):
+            estimator,
+            metrics_lt: list = [
+                'accuracy',
+                'average_precision',
+                'balanced_accuracy',
+                'f1',
+                'neg_log_loss',
+                'precision',
+                'recall',
+                'roc_auc']):
         '''
         Evaluates classification model
 
         Parameters
         ----------
         estimator : TYPE
-            Estimator.
+            DESCRIPTION.
+        metrics_lt : list, optional
+            DESCRIPTION. The default is ['accuracy', 'average_precision', 'balanced_accuracy', 'f1', 'neg_log_loss', 'precision', 'recall', 'roc_auc'].
 
         Returns
         -------
@@ -31,6 +42,7 @@ class ClassificationEvaluator:
 
         '''
         self.estimator = estimator
+        self.metrics_lt = metrics_lt
         
     def fit(
             self, 
@@ -376,18 +388,9 @@ class ClassificationEvaluator:
             Eval metrics.
 
         '''
-        classification_metrics_lt = [
-            'accuracy',
-            'average_precision',
-            'balanced_accuracy',
-            'f1',
-            'neg_log_loss',
-            'precision',
-            'recall',
-            'roc_auc']
         eval_metrics_dt = {
             scorer_sr: snmes.get_scorer(scoring=scorer_sr).__call__(estimator=self.estimator, X=X, y_true=y)
-            for scorer_sr in classification_metrics_lt}
+            for scorer_sr in self.metrics_lt}
         return eval_metrics_dt
     
     def _compare_eval_metrics(
@@ -445,14 +448,25 @@ class ClassificationEvaluator:
 class RegressionEvaluator:
     def __init__(
             self, 
-            estimator):
+            estimator, 
+            metrics_lt: list = [
+                'explained_variance',
+                'max_error',
+                'neg_mean_absolute_error',
+                'neg_mean_absolute_percentage_error',
+                'neg_mean_squared_error',
+                'neg_mean_squared_log_error',
+                'neg_median_absolute_error',
+                'r2']):
         '''
         Evaluates regression model
-
+        
         Parameters
         ----------
         estimator : TYPE
             DESCRIPTION.
+        metrics_lt : list, optional
+            DESCRIPTION. The default is ['explained_variance', 'max_error', 'neg_mean_absolute_error', 'neg_mean_absolute_percentage_error', 'neg_mean_squared_error', 'neg_mean_squared_log_error', 'neg_median_absolute_error', 'r2'].
 
         Returns
         -------
@@ -460,6 +474,7 @@ class RegressionEvaluator:
 
         '''
         self.estimator = estimator
+        self.metrics_lt = metrics_lt
         
     def fit(
             self, 
@@ -608,18 +623,9 @@ class RegressionEvaluator:
             Eval metrics.
 
         '''
-        regression_metrics_lt = [
-            'explained_variance',
-            'max_error',
-            'neg_mean_absolute_error',
-            'neg_mean_absolute_percentage_error',
-            'neg_mean_squared_error',
-            'neg_mean_squared_log_error',
-            'neg_median_absolute_error',
-            'r2']
         eval_metrics_dt = {
             scorer_sr: snmes.get_scorer(scoring=scorer_sr).__call__(estimator=self.estimator, X=X, y_true=y)
-            for scorer_sr in regression_metrics_lt}
+            for scorer_sr in self.metrics_lt}
         return eval_metrics_dt
     
     def _compare_eval_metrics(
