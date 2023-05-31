@@ -2415,11 +2415,9 @@ class FeatureSelector:
             Feature to keep.
 
         '''
-        features_ix = X.columns
+        features_ix = X.columns.difference(other=ccbcv.cat_boost_dt['ignored_features'])
         if self.strategy_sr == 'drop_nonpositive_means':
-            drop_ix = (
-                ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
-                .difference(other=ccbcv.cat_boost_dt['ignored_features']))
+            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
         elif self.strategy_sr == 'drop_negative_means':
             drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean < 0').index
         elif self.strategy_sr == 'drop_negative_ucis':
