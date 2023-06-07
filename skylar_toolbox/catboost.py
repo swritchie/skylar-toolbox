@@ -1745,22 +1745,23 @@ class FeatureInspector:
         depth_it = self.ccb.cbm.get_all_params().get('depth')
         splits_df = pd.concat(objs=[
             pd.DataFrame(data=self.model_dt['oblivious_trees'][tree_index_it]['splits'])
-            .astype(dtype={'float_feature_index': pd.Int32Dtype()})
             .assign(
                 tree_index = tree_index_it,
                 depth_index = lambda x: depth_it - x.index.to_numpy() - 1)
             .sort_values(by='depth_index')
             for tree_index_it in range(len(self.model_dt['oblivious_trees']))
         ], ignore_index=True)
-        splits_df = (
-            splits_df
-            .merge(
-                right=self.float_features_df[['feature_id', 'feature_index']], 
-                how='left', 
-                left_on='float_feature_index', 
-                right_on='feature_index', 
-                validate='many_to_one')
-            .drop(columns='feature_index'))
+        if 'float_feature_index' in splits_df.columns:
+            splits_df = (
+                splits_df
+                .astype(dtype={'float_feature_index': pd.Int32Dtype()})
+                .merge(
+                    right=self.float_features_df[['feature_id', 'feature_index']], 
+                    how='left', 
+                    left_on='float_feature_index', 
+                    right_on='feature_index', 
+                    validate='many_to_one')
+                .drop(columns='feature_index'))
         return splits_df
     
     def _get_lfc_feature_importances_by_tree(
