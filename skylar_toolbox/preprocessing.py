@@ -7,6 +7,8 @@ import pandas as pd
 from feature_engine import datetime as fedt
 from feature_engine import encoding as feeg
 from feature_engine import outliers as feos
+from sklearn import base as snbe
+from sklearn import feature_selection as snfs
 from sklearn import linear_model as snlm
 from sklearn import model_selection as snmos
 from sklearn import pipeline as snpe
@@ -195,6 +197,145 @@ class DatetimeFeaturesTuner:
                 se2_test_score = lambda x: 2 * x['std_test_score'] / np.sqrt(self.gscv.n_splits_)))
         return plot_df
     
+# =============================================================================
+# InteractionEngineer
+# =============================================================================
+
+class InteractionEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
+    def __init__(
+            self, 
+            model_type_sr: str, 
+            feature_sr: str, 
+            feature_sr2: str, 
+            fit_dt: dict = dict(random_state=0)):
+        '''
+        Selects best interaction and engineers it        
+
+        Parameters
+        ----------
+        model_type_sr : str
+            Model type.
+        feature_sr : str
+            First feature.
+        feature_sr2 : str
+            Second feature.
+        fit_dt : dict, optional
+            Parameters passed to snfs.mutual_info_classif/regression(). The default is dict(random_state=0).
+
+        Raises
+        ------
+        NotImplementedError
+            Implemented values of model_type_sr are  ['classification', 'regression']
+
+        Returns
+        -------
+        None.
+
+        '''
+        implemented_model_types_lt = ['classification', 'regression']
+        if model_type_sr not in implemented_model_types_lt:
+            raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
+        self.model_type_sr = model_type_sr
+        self.feature_sr = feature_sr
+        self.feature_sr2 = feature_sr2
+        self.fit_dt = fit_dt
+        
+    def fit(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series):
+        '''
+        Selects best interaction
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Get function for model type
+        mutual_info_fn = (
+            snfs.mutual_info_classif if self.model_type_sr == 'classification' 
+            else snfs.mutual_info_regression)
+        
+        # Subset feature matrix and engineer all interactions
+        self.assign_dt = {
+            f'{self.feature_sr}-add-{self.feature_sr2}': self._add,
+            f'{self.feature_sr}-sub-{self.feature_sr2}': self._sub,
+            f'{self.feature_sr2}-sub-{self.feature_sr}': self._sub2,
+            f'{self.feature_sr}-mul-{self.feature_sr2}': self._mul,
+            f'{self.feature_sr}-div-{self.feature_sr2}': self._div,
+            f'{self.feature_sr2}-div-{self.feature_sr}': self._div2}
+        X_subset = X.loc[:, [self.feature_sr, self.feature_sr2]].assign(**self.assign_dt)
+        
+        # Select best
+        self.mutual_info_ss = (
+            pd.Series(data=mutual_info_fn(X=X_subset, y=y), index=X_subset.columns, name='mutual_info')
+            .sort_values())
+        self.best_sr = (
+            self.mutual_info_ss
+            .drop(labels=[self.feature_sr, self.feature_sr2])
+            .nlargest(n=1)
+            .index[0])
+        return self
+    
+    def transform(
+            self, 
+            X: pd.DataFrame):
+        '''
+        Engineers best interaction
+        
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Input feature matrix.
+
+        Returns
+        -------
+        X : pd.DataFrame
+            Output feature matrix.
+
+        '''
+        X = X.assign(**{self.best_sr: self.assign_dt[self.best_sr]})
+        return X 
+    
+    def plot(self):
+        '''
+        Plots mutual info
+
+        Returns
+        -------
+        ax : plt.Axes
+            Axis
+
+        '''
+        ax = self.mutual_info_ss.plot(kind='barh')
+        return ax
+
+    def _add(self, x):
+        return x[self.feature_sr] + x[self.feature_sr2]
+    
+    def _sub(self, x):
+        return x[self.feature_sr] - x[self.feature_sr2]
+    
+    def _sub2(self, x):
+        return x[self.feature_sr2] - x[self.feature_sr]
+    
+    def _mul(self, x):
+        return x[self.feature_sr] * x[self.feature_sr2]
+    
+    def _div(self, x):
+        return x[self.feature_sr] / (x[self.feature_sr2] + 1e-10)
+    
+    def _div2(self, x):
+        return x[self.feature_sr2] / (x[self.feature_sr] + 1e-10)
 
 # =============================================================================
 # RareLabelEncoderTuner
