@@ -1154,7 +1154,8 @@ class ExampleSelector:
             # Fit inspector
             ei = ExampleInspector(ccbcv=ccbcv, losses_nlargest_n_it=self.losses_nlargest_n_it)
             ei.fit(X=X, y=y)
-            self.inspectors_lt.append(ei)
+            if self.store_models_bl:
+                self.inspectors_lt.append(ei)
 
             # Get features to drop and keep
             examples_ix, drop_ix, keep_ix = self._get_examples(X=X, ei=ei)
