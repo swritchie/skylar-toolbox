@@ -2088,7 +2088,7 @@ class FeatureSelector:
             objective_sr: str = 'minimize', 
             strategy_sr: str = 'drop_negative_means', 
             wait_it: int = 10, 
-            store_models_bl: bool = True,
+            store_models_bl: bool = False,
             losses_nsmallest_n_it: int = 1):
         '''
         Selects features by iteratively removing those with highest validation losses
