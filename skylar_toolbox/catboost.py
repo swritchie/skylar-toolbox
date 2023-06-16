@@ -1063,7 +1063,7 @@ class ExampleSelector:
         wait_it : int, optional
             Number of iterations to wait before terminating procedure. The default is 10.
         store_models_bl : bool, optional
-            Flag for whether to store during procedure to save memory. The default is True.
+            Flag for whether to store during procedure to save memory. The default is False.
 
         Raises
         ------
@@ -2106,9 +2106,9 @@ class FeatureSelector:
         strategy_sr : str, optional
             Strategy for dropping features. The default is 'drop_negative_means'.
         wait_it : int, optional
-            Number of iterations to wait before terminating procedure. The default is 10.
+            Number of iterations to wait before terminating procedure. The default is 100.
         store_models_bl : bool, optional
-            Flag for whether to store during procedure to save memory. The default is True.
+            Flag for whether to store during procedure to save memory. The default is False.
         losses_nsmallest_n_it : int, optional
             Number of features to drop. The default is 1.
 
