@@ -1042,7 +1042,7 @@ class ExampleSelector:
             losses_nlargest_n_it: int = 1_000,
             example_importances_nlargest_n_it: int = 100,
             wait_it: int = 10,
-            store_models_bl: bool = True):
+            store_models_bl: bool = False):
         '''
         Selects examples by iteratively removing those with highest validation losses
 
