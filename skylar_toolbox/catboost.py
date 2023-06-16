@@ -1042,7 +1042,7 @@ class ExampleSelector:
             losses_nlargest_n_it: int = 1_000,
             example_importances_nlargest_n_it: int = 100,
             wait_it: int = 10,
-            store_models_bl: bool = True):
+            store_models_bl: bool = False):
         '''
         Selects examples by iteratively removing those with highest validation losses
 
@@ -1154,7 +1154,8 @@ class ExampleSelector:
             # Fit inspector
             ei = ExampleInspector(ccbcv=ccbcv, losses_nlargest_n_it=self.losses_nlargest_n_it)
             ei.fit(X=X, y=y)
-            self.inspectors_lt.append(ei)
+            if self.store_models_bl:
+                self.inspectors_lt.append(ei)
 
             # Get features to drop and keep
             examples_ix, drop_ix, keep_ix = self._get_examples(X=X, ei=ei)
@@ -2087,7 +2088,7 @@ class FeatureSelector:
             objective_sr: str = 'minimize', 
             strategy_sr: str = 'drop_negative_means', 
             wait_it: int = 10, 
-            store_models_bl: bool = True,
+            store_models_bl: bool = False,
             losses_nsmallest_n_it: int = 1):
         '''
         Selects features by iteratively removing those with highest validation losses
