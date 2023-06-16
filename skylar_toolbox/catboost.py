@@ -2087,7 +2087,7 @@ class FeatureSelector:
             sklearn_splitter, 
             objective_sr: str = 'minimize', 
             strategy_sr: str = 'drop_negative_means', 
-            wait_it: int = 10, 
+            wait_it: int = 100, 
             store_models_bl: bool = False,
             losses_nsmallest_n_it: int = 1):
         '''
