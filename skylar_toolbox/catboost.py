@@ -958,10 +958,10 @@ class ExampleInspector:
             losses_ss = -(y_valid * np.log(y_valid_pred)).sum(axis=1).rename(index='losses')
             return losses_ss
         elif loss_function_sr == 'RMSE':
-            losses_ss = ((ccb.y_train - ccb.y_train_pred)**2).rename(index='losses')
+            losses_ss = ((ccb.y_valid - ccb.y_valid_pred)**2).rename(index='losses')
             return losses_ss
         elif loss_function_sr == 'MAE':
-            losses_ss = np.abs(ccb.y_train - ccb.y_train_pred).rename(index='losses')
+            losses_ss = np.abs(ccb.y_valid - ccb.y_valid_pred).rename(index='losses')
             return losses_ss
         else:
             raise NotImplementedError(f'Implemented values of loss_function_sr are {implemented_loss_functions_lt}')
