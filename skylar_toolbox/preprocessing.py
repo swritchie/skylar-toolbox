@@ -15,6 +15,156 @@ from sklearn import pipeline as snpe
 from skylar_toolbox import model_selection as stms
 
 # =============================================================================
+# AggregationEngineer
+# =============================================================================
+
+class AggregationEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
+    def __init__(
+            self, 
+            model_type_sr: str, 
+            features_ix: pd.Index,
+            fit_dt: dict = dict(random_state=0),
+            aggregations_lt: list = ['min', 'median', 'mean', 'max', 'std', 'sum'],
+            name_sr: str = None, 
+            drop_originals_bl: bool = False):
+        '''
+        Selects and engineers aggregations that are better than originals
+
+        Parameters
+        ----------
+        model_type_sr : str
+            Model type.
+        features_ix : pd.Index
+            Features to aggregate.
+        fit_dt : dict, optional
+            Parameters passed to snfs.mutual_info_classif/regression(). The default is dict(random_state=0).
+        aggregations_lt : list, optional
+            Aggregations to try. The default is ['min', 'median', 'mean', 'max', 'std', 'sum'].
+        name_sr : str, optional
+            Output column name. The default is None.
+        drop_originals_bl : bool, optional
+            Flag for whether to drop originals. The default is False.
+
+        Raises
+        ------
+        NotImplementedError
+            Implemented values of model_type_sr are  ['classification', 'regression']
+
+        Returns
+        -------
+        None.
+
+        '''
+        implemented_model_types_lt = ['classification', 'regression']
+        if model_type_sr not in implemented_model_types_lt:
+            raise NotImplementedError(f'Implemented values of model_type_sr are {implemented_model_types_lt}')
+        self.model_type_sr = model_type_sr
+        self.features_ix = features_ix
+        self.fit_dt = fit_dt
+        self.aggregations_lt = aggregations_lt
+        self.name_sr = name_sr
+        self.drop_originals_bl = drop_originals_bl
+        
+    def fit(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series):
+        '''
+        Selects best aggregation(s)
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Get function for model type
+        mutual_info_fn = (
+            snfs.mutual_info_classif if self.model_type_sr == 'classification' 
+            else snfs.mutual_info_regression)
+        
+        # Subset feature matrix
+        X_subset = X.loc[:, self.features_ix]
+        
+        # Get mutual info
+        subset_mutual_info_ss = pd.Series(
+            data=mutual_info_fn(X=X_subset, y=y, **self.fit_dt),
+            index=X_subset.columns, 
+            name='mutual_info')
+        
+        # Engineer aggregations
+        X_agg = X_subset.agg(func=self.aggregations_lt, axis=1)
+        
+        # Get mutual info
+        agg_mutual_info_ss = pd.Series(
+            data=mutual_info_fn(X=X_agg, y=y, **self.fit_dt), 
+            index=X_agg.columns, 
+            name='mutual_info')
+        
+        # Select best
+        self.best_ix = agg_mutual_info_ss.index[agg_mutual_info_ss > subset_mutual_info_ss.max()]
+        self.mutual_info_ss = pd.concat(objs=[subset_mutual_info_ss, agg_mutual_info_ss]).sort_values()
+        return self
+    
+    def transform(
+            self, 
+            X: pd.DataFrame):
+        '''
+        Engineers best aggregation(s)
+        
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Input feature matrix.
+
+        Returns
+        -------
+        X : pd.DataFrame
+            Output feature matrix.
+
+        '''
+        # If any aggregated features are better than originals...
+        if not self.best_ix.empty:
+            # Subset feature matrix
+            X_subset = X.loc[:, self.features_ix]
+            
+            # Engineer aggregations
+            labels_ix = self.best_ix + '-' + self.name_sr if self.name_sr \
+                else self.best_ix + '-' + '-'.join(self.features_ix)
+            X_agg = (
+                X_subset
+                .agg(func=self.best_ix.tolist(), axis=1)
+                .set_axis(labels=labels_ix, axis=1))
+            
+            # Join
+            X = X.join(other=X_agg)
+        
+        # If dropping originals...
+        if self.drop_originals_bl:
+            X.drop(columns=self.features_ix, inplace=True)
+        return X
+    
+    def plot(self):
+        '''
+        Plots mutual info
+
+        Returns
+        -------
+        ax : plt.Axes
+            Axis
+
+        '''
+        ax = self.mutual_info_ss.plot(kind='barh')
+        return ax
+
+# =============================================================================
 # cast_frame_to_string_and_clean
 # =============================================================================
 
