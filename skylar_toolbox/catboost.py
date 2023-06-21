@@ -2037,7 +2037,7 @@ class FeatureSelector:
             sklearn_splitter, 
             objective_sr: str = 'minimize', 
             strategy_sr: str = 'drop_nsmallest_means', 
-            wait_it: int = 100, 
+            wait_it: int = 10, 
             store_models_bl: bool = False,
             losses_nsmallest_n_it: int = 1):
         '''
@@ -2056,7 +2056,7 @@ class FeatureSelector:
         strategy_sr : str, optional
             Strategy for dropping features. The default is 'drop_nsmallest_means'.
         wait_it : int, optional
-            Number of iterations to wait before terminating procedure. The default is 100.
+            Number of iterations to wait before terminating procedure. The default is 10.
         store_models_bl : bool, optional
             Flag for whether to store during procedure to save memory. The default is False.
         losses_nsmallest_n_it : int, optional
