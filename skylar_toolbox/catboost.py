@@ -62,7 +62,8 @@ class CustomCatBoost:
             y_train: pd.Series, 
             X_valid: pd.DataFrame, 
             y_valid: pd.Series, 
-            fit_dt: dict = dict()):
+            fit_dt: dict = dict(),
+            sample_dt: dict = None):
         '''
         Fits model and stores metadata
 
@@ -78,6 +79,8 @@ class CustomCatBoost:
             Validation target vector.
         fit_dt : dict, optional
             Fit params. The default is dict().
+        sample_dt : dict, optional
+            Sample params for getting example importances. The default is None.
 
         Returns
         -------
@@ -113,6 +116,12 @@ class CustomCatBoost:
         # Get interaction strengths
         if X_train.shape[1] > 1:
             self.interaction_strengths_df = self._get_interaction_strengths()
+            
+        # Get example importances
+        if sample_dt:
+            valid_ix = y_valid.sample(**sample_dt).index
+            self.example_importances_ss = self._get_example_importances(
+                X_train=X_train, X_valid=X_valid, valid_ix=valid_ix)
         return self
     
     def plot_evals_result(self):
@@ -216,12 +225,21 @@ class CustomCatBoost:
             Figure.
 
         '''
-        interaction_strengths_ss = self.interaction_strengths_df['strengths']
-        data_ss = interaction_strengths_ss.describe().round(decimals=3)
-        ax = interaction_strengths_ss.plot()
-        ax.set(xticks=[])
-        ax.axhline(y=0, c='k', ls=':')
-        pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        ax = steda.plot_line(ss=self.interaction_strengths_df['strengths'])
+        fig = ax.figure
+        return fig
+    
+    def plot_example_importances(self):
+        '''
+        Plots example importances
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        ax = steda.plot_line(ss=self.example_importances_ss)
         fig = ax.figure
         return fig
     
@@ -430,6 +448,39 @@ class CustomCatBoost:
                     first_features = lambda x: x['first_features'].map(arg=map_dt),
                     second_features = lambda x: x['second_features'].map(arg=map_dt)))
         return interaction_strengths_df
+    
+    def _get_example_importances(
+        self, 
+        X_train: pd.DataFrame, 
+        X_valid: pd.Series, 
+        valid_ix: pd.Index):
+        '''
+        Gets example importances
+
+        Parameters
+        ----------
+        X_train : pd.DataFrame
+            Train feature matrix.
+        X_valid : pd.DataFrame
+            Validation feature matrix.
+        valid_ix : pd.Index
+            Sampled validation index.
+
+        Returns
+        -------
+        example_importances_ss : pd.Series
+            Example importances.
+
+        '''
+        train_ix = self.y_train.index
+        pool_dt = dict(cat_features=self.cat_boost_dt['cat_features'])
+        indices_lt, scores_lt = self.cbm.get_object_importance(
+            pool=cb.Pool(data=X_valid.loc[valid_ix, :], label=self.y_valid.loc[valid_ix], **pool_dt),
+            train_pool=cb.Pool(data=X_train, label=self.y_train, **pool_dt), 
+            thread_count=1,
+            verbose=train_ix.shape[0] // 10)
+        example_importances_ss = pd.Series(data=scores_lt, index=train_ix[indices_lt], name='importances')
+        return example_importances_ss
 
 # =============================================================================
 # CustomCatBoostCV
