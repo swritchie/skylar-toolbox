@@ -2371,14 +2371,20 @@ class FeatureSelector:
         '''
         features_ix = X.columns
         if self.strategy_sr == 'drop_nonpositive_means':
-            drop_ix = ccbcv.feature_importances_df.query(expr='validation_mean <= 0').index
+            drop_ix = (
+                ccbcv.feature_importances_df
+                .drop(index=ccbcv.cat_boost_dt['ignored_features'])
+                .query(expr='validation_mean <= 0').index)
         elif self.strategy_sr == 'drop_negative_means':
             drop_ix = ccbcv.feature_importances_df.query(expr='validation_mean < 0').index
         elif self.strategy_sr == 'drop_negative_ucis':
             drop_ix = ccbcv.feature_importances_df.query(expr='validation_uci < 0').index
         elif self.strategy_sr == 'drop_nsmallest_means':
-            drop_ix = ccbcv.feature_importances_df['validation_mean'].nsmallest(n=self.losses_nsmallest_n_it).index
-        drop_ix = drop_ix.difference(other=ccbcv.cat_boost_dt['ignored_features'])
+            drop_ix = (
+                ccbcv.feature_importances_df
+                .drop(index=ccbcv.cat_boost_dt['ignored_features'])
+                .loc[:, 'validation_mean']
+                .nsmallest(n=self.losses_nsmallest_n_it).index)
         keep_ix = features_ix.difference(other=drop_ix)
         return features_ix, drop_ix, keep_ix
     
