@@ -852,250 +852,23 @@ class DifferenceCallback:
         difference_ft = np.abs(validation_metric_ft - learn_metric_ft)
         continue_bl = difference_ft < self.threshold_ft
         return continue_bl
-
-# =============================================================================
-# ExampleInspector
-# =============================================================================
-    
-class ExampleInspector:
-    def __init__(
-            self, 
-            ccbcv: CustomCatBoostCV, 
-            losses_nlargest_n_it: int = 1_000):
-        '''
-        Gets losses and importances (of train on validation) per example
-
-        Parameters
-        ----------
-        ccbcv : CustomCatBoostCV
-            Cross-validated model.
-        losses_nlargest_n_it : int, optional
-            Number of validation examples to use for train example importances. The default is 1_000.
-
-        Returns
-        -------
-        None.
-
-        '''
-        self.ccbcv = ccbcv
-        self.losses_nlargest_n_it = losses_nlargest_n_it
-    
-    def fit(
-            self, 
-            X: pd.DataFrame, 
-            y: pd.Series):
-        '''
-        Gets losses and example importances
-
-        Parameters
-        ----------
-        X : pd.DataFrame
-            Feature matrix.
-        y : pd.Series
-            Target vector.
-
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
-        '''
-        losses_lt, example_importances_lt = [], []
-        
-        for index_it, ccb in enumerate(iterable=self.ccbcv.models_lt):
-            # Log
-            print('-' * 80)
-            print(f'Split: {index_it}')
-            
-            # Get losses
-            losses_ss = self._get_losses(ccb=ccb)
-            losses_lt.append(losses_ss)
-            
-            # Get largest validation losses
-            valid_ix = ccb.y_valid.index
-            largest_losses_ss = losses_ss.loc[valid_ix].nlargest(n=self.losses_nlargest_n_it)
-            
-            # Sort columns
-            X = X[ccb.cbm.feature_names_]
-            
-            # Get example importances
-            example_importances_ss = self._get_example_importances(largest_losses_ss=largest_losses_ss, ccb=ccb, X=X, y=y)
-            example_importances_lt.append(example_importances_ss)
-            
-        # Combine losses
-        self.losses_ss = pd.concat(objs=losses_lt).sort_values(ascending=False)
-        
-        # Compare example importances
-        self.example_importances_df = self._compare_example_importances(example_importances_lt=example_importances_lt)
-        return self
-    
-    def plot_losses(self):
-        '''
-        Plots histogram of losses
-
-        Returns
-        -------
-        fig : plt.Figure
-            Figure.
-
-        '''
-        ax = steda.plot_histogram(ss=self.losses_ss)
-        fig = ax.figure
-        return fig
-    
-    def plot_example_importances(self):
-        '''
-        Plots histogram of example importances
-
-        Returns
-        -------
-        fig : plt.Figure
-            Figure.
-
-        '''
-        ax = steda.plot_histogram(ss=self.example_importances_df['mean'])
-        fig = ax.figure
-        return fig
-    
-    def delete_predictions_and_targets(self):
-        '''
-        Deletes predictions and targets
-
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
-        '''
-        for ccb in self.ccbcv.models_lt:
-            ccb.delete_predictions_and_targets()
-        return self
-    
-    def _get_losses(
-            self, 
-            ccb: CustomCatBoost):
-        '''
-        Gets losses for all examples
-
-        Parameters
-        ----------
-        ccb : CustomCatBoost
-            Model.
-
-        Raises
-        ------
-        NotImplementedError
-            Implemented values of loss_function_sr are ['Logloss', 'RMSE', 'MAE']
-
-        Returns
-        -------
-        losses_ss : pd.Series
-            Losses.
-
-        '''
-        loss_function_sr = ccb.cat_boost_dt['loss_function']
-        implemented_loss_functions_lt = ['Logloss', 'RMSE', 'MAE']
-        if loss_function_sr == 'Logloss':
-            # Get targets
-            y_valid = pd.get_dummies(data=ccb.y_valid)
-            # Get predictions
-            y_valid_pred = (
-                ccb.y_valid_pred
-                .to_frame(name='_1')
-                .assign(_0 = lambda x: 1 - x['_1'])
-                .rename(columns=lambda x: int(x[-1]))
-                .sort_index(axis=1))
-            # Get losses
-            losses_ss = -(y_valid * np.log(y_valid_pred)).sum(axis=1).rename(index='losses')
-            return losses_ss
-        elif loss_function_sr == 'RMSE':
-            losses_ss = ((ccb.y_valid - ccb.y_valid_pred)**2).rename(index='losses')
-            return losses_ss
-        elif loss_function_sr == 'MAE':
-            losses_ss = np.abs(ccb.y_valid - ccb.y_valid_pred).rename(index='losses')
-            return losses_ss
-        else:
-            raise NotImplementedError(f'Implemented values of loss_function_sr are {implemented_loss_functions_lt}')
-    
-    def _get_example_importances(
-            self, 
-            largest_losses_ss: pd.Series, 
-            ccb: CustomCatBoost, 
-            X: pd.DataFrame, 
-            y: pd.Series):
-        '''
-        Gets example importances
-
-        Parameters
-        ----------
-        largest_losses_ss : pd.Series
-            Largest validation losses.
-        ccb : CustomCatBoost
-            Model.
-        X : pd.DataFrame
-            Feature matrix.
-        y : pd.Series
-            Target vector.
-
-        Returns
-        -------
-        example_importances_ss : pd.Series
-            Example importances.
-
-        '''
-        largest_losses_ix = largest_losses_ss.index
-        train_ix = ccb.y_train.index
-        pool_dt = dict(cat_features=ccb.cat_boost_dt['cat_features'])
-        indices_lt, scores_lt = ccb.cbm.get_object_importance(
-            pool=cb.Pool(data=X.loc[largest_losses_ix, :], label=y.loc[largest_losses_ix], **pool_dt),
-            train_pool=cb.Pool(data=X.loc[train_ix, :], label=y.loc[train_ix], **pool_dt), 
-            verbose=train_ix.shape[0] // 10)
-        example_importances_ss = pd.Series(data=scores_lt, index=train_ix[indices_lt], name='importances')
-        return example_importances_ss
-    
-    def _compare_example_importances(
-            self, 
-            example_importances_lt: list):
-        '''
-        Compares example importances across subsets of data
-
-        Parameters
-        ----------
-        example_importances_lt : list
-            Example importances per split.
-
-        Returns
-        -------
-        example_importances_df : pd.DataFrame
-            Example importances.
-
-        '''
-        example_importances_df = pd.concat(objs=[
-            example_importances_ss.rename(index=index_it)
-            for index_it, example_importances_ss in enumerate(iterable=example_importances_lt)
-        ], axis=1)
-        example_importances_df = (
-            steda.get_means(df=example_importances_df, columns_lt=example_importances_df.columns.tolist())
-            .sort_values(by='mean', ascending=False))
-        return example_importances_df
     
 # =============================================================================
 # ExampleSelector
 # =============================================================================
-
+    
 class ExampleSelector:
     def __init__(
             self,
             model_type_sr: str,
-            cat_boost_dt: dict,
-            sklearn_splitter,
-            objective_sr: str = 'minimize',
-            losses_nlargest_n_it: int = 1_000,
-            example_importances_nlargest_n_it: int = 100,
-            wait_it: int = 10,
+            cat_boost_dt: dict, 
+            sklearn_splitter, 
+            objective_sr: str = 'minimize', 
+            strategy_sr: str = 'drop_positive_lcis', 
+            wait_it: int = 10, 
             store_models_bl: bool = False):
         '''
-        Selects examples by iteratively removing those with highest validation losses
+        Selects examples by iteratively removing those contributing most to validation losses
 
         Parameters
         ----------
@@ -1107,10 +880,8 @@ class ExampleSelector:
             Splitter from scikit-learn.
         objective_sr : str, optional
             Objective for eval metric. The default is 'minimize'.
-        losses_nlargest_n_it : int, optional
-            Number of validation examples to use for train example importances. The default is 1_000.
-        example_importances_nlargest_n_it : int, optional
-            Number of train examples to drop. The default is 100.
+        strategy_sr : str, optional
+            Strategy for dropping examples. The default is 'drop_positive_means'.
         wait_it : int, optional
             Number of iterations to wait before terminating procedure. The default is 10.
         store_models_bl : bool, optional
@@ -1122,6 +893,8 @@ class ExampleSelector:
             Required key "['train_dir']" is not in cat_boost_dt.
         ValueError
             Permitted values of objective_sr are ['minimize', 'maximize']
+        NotImplementedError
+            Implemented values of strategy_sr are ['drop_positive_means', 'drop_positive_lcis']
 
         Returns
         -------
@@ -1141,17 +914,20 @@ class ExampleSelector:
         self.objective_sr = objective_sr
         self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
         self.best_iteration_it = 0
-        self.losses_nlargest_n_it = losses_nlargest_n_it
-        self.example_importances_nlargest_n_it = example_importances_nlargest_n_it
+        implemented_strategies_lt = ['drop_positive_means', 'drop_positive_lcis']
+        if strategy_sr not in implemented_strategies_lt:
+            raise NotImplementedError(f'Implemented values of strategy_sr are {implemented_strategies_lt}')
+        self.strategy_sr = strategy_sr
         self.wait_it = wait_it
         self.store_models_bl = store_models_bl
-
+        
     def fit(
-            self,
-            X: pd.DataFrame,
+            self, 
+            X: pd.DataFrame, 
             y: pd.Series,
+            split_dt: dict = dict(),
             fit_dt: dict = dict(), 
-            split_dt: dict = dict()):
+            sample_dt: dict = dict(n=1_000)):
         '''
         Fits models, stores metadata, and drops examples
 
@@ -1161,10 +937,12 @@ class ExampleSelector:
             Feature matrix.
         y : pd.Series
             Target vector.
-        fit_dt : dict, optional
-            Fit params. The default is dict().
         split_dt : dict, optional
             Split params (e.g., groups). The default is dict().
+        fit_dt : dict, optional
+            Fit params. The default is dict().
+        sample_dt : dict, optional
+            Sample params. The default is dict(n=1_000).
 
         Returns
         -------
@@ -1175,42 +953,35 @@ class ExampleSelector:
         # Make directory
         output_directory_sr = self.cat_boost_dt['train_dir']
         os.mkdir(path=output_directory_sr)
-
+        
         # Initialize
         iteration_it = 0
         self.models_lt = []
-        self.inspectors_lt = []
         self.results_lt = []
-
+        
         # Loop
         while True:
             # Log
             print('=' * 80)
             print(f'Iteration: {iteration_it}')
-
+            
             # Update parameters
             output_subdirectory_sr = '{}/{:03d}'.format(output_directory_sr, iteration_it)
-            self._update_params(train_dir_sr=output_subdirectory_sr)
-
+            self._update_params(X=X, train_dir_sr=output_subdirectory_sr)
+            
             # Fit model
             ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
-            ccbcv.fit(X=X, y=y, fit_dt=fit_dt, split_dt=split_dt)
+            ccbcv.fit(X=X, y=y, split_dt=split_dt, fit_dt=fit_dt, sample_dt=sample_dt)
             if self.store_models_bl:
                 self.models_lt.append(ccbcv)
-
+            
             # Get score and update bests
             score_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'validation_mean']
             self._update_best_score_and_iteration(score_ft=score_ft, iteration_it=iteration_it)
-
-            # Fit inspector
-            ei = ExampleInspector(ccbcv=ccbcv, losses_nlargest_n_it=self.losses_nlargest_n_it)
-            ei.fit(X=X, y=y)
-            if self.store_models_bl:
-                self.inspectors_lt.append(ei)
-
-            # Get features to drop and keep
-            examples_ix, drop_ix, keep_ix = self._get_examples(X=X, ei=ei)
-
+            
+            # Get examples to drop and keep
+            examples_ix, drop_ix, keep_ix = self._get_examples(X=X, ccbcv=ccbcv)
+            
             # Get and print result
             pct_diff_ft = ccbcv.eval_metrics_df.loc[self.cat_boost_dt['eval_metric'], 'pct_diff']
             result_dt = self._get_result(iteration_it=iteration_it, score_ft=score_ft, pct_diff_ft=pct_diff_ft, examples_ix=examples_ix, drop_ix=drop_ix, keep_ix=keep_ix)
@@ -1219,7 +990,7 @@ class ExampleSelector:
             
             # Get results
             self.results_df = self._get_results()
-    
+            
             # Get ranks
             self.ranks_df = self._get_ranks()
             
@@ -1227,13 +998,13 @@ class ExampleSelector:
             pd.to_pickle(obj=self, filepath_or_buffer=os.path.join(output_directory_sr, 'es.pkl'), protocol=4)
             
             # Evaluate whether to continue
-            if ((iteration_it - self.best_iteration_it == self.wait_it) or
+            if ((iteration_it - self.best_iteration_it == self.wait_it) or 
             (drop_ix.empty) or
             (keep_ix.empty)):
                 break
             else:
-                X.drop(index=drop_ix, inplace=True)
-                y.drop(index=drop_ix, inplace=True)
+                X.drop(columns=drop_ix, inplace=True)
+                y.drop(columns=drop_ix, inplace=True)
                 iteration_it += 1
         return self
 
@@ -1296,21 +1067,7 @@ class ExampleSelector:
         best_iteration_it = self._get_best_iteration()
         best_ccbcv = self.models_lt[best_iteration_it]
         return best_ccbcv
-
-    def get_best_inspector(self):
-        '''
-        Gets inspector from best iteration
-
-        Returns
-        -------
-        best_ei : ExampleInspector
-            Best inspector.
-
-        '''
-        best_iteration_it = self._get_best_iteration()
-        best_ei = self.inspectors_lt[best_iteration_it]
-        return best_ei
-
+    
     def plot_results(self):
         '''
         Plots results
@@ -1329,7 +1086,7 @@ class ExampleSelector:
             pd.plotting.table(ax=axes[index_it], data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig.tight_layout()
         return fig
-
+    
     def plot_ranks(self):
         '''
         Plots ranks
@@ -1345,7 +1102,7 @@ class ExampleSelector:
             ax.scatter(x=column_ss.idxmin(), y=column_ss.min())
         fig = ax.figure
         return fig
-
+    
     def delete_predictions_and_targets(self):
         '''
         Deletes predictions and targets
@@ -1359,7 +1116,7 @@ class ExampleSelector:
         for ccbcv in self.models_lt:
             ccbcv.delete_predictions_and_targets()
         return self
-
+    
     def _update_params(
             self,
             train_dir_sr: str):
@@ -1379,10 +1136,10 @@ class ExampleSelector:
         '''
         self.cat_boost_dt['train_dir'] = train_dir_sr
         return self
-
+            
     def _update_best_score_and_iteration(
-            self,
-            score_ft: float,
+            self, 
+            score_ft: float, 
             iteration_it: int):
         '''
         Updates best score and iteration
@@ -1407,11 +1164,11 @@ class ExampleSelector:
             self.best_score_ft = score_ft
             self.best_iteration_it = iteration_it
         return self
-
+    
     def _get_examples(
-            self,
-            X: pd.DataFrame,
-            ei: ExampleInspector):
+        self, 
+        X: pd.DataFrame,
+        ccbcv: CustomCatBoostCV):
         '''
         Gets examples
 
@@ -1419,8 +1176,8 @@ class ExampleSelector:
         ----------
         X : pd.DataFrame
             Feature matrix.
-        ei : ExampleInspector
-            Inspector.
+        ccbcv : CustomCatBoostCV
+            Cross-validated model.
 
         Returns
         -------
@@ -1433,21 +1190,20 @@ class ExampleSelector:
 
         '''
         examples_ix = X.index
-        drop_ix = (
-            ei.example_importances_df
-            .query(expr='lci > 0')['mean']
-            .nlargest(n=self.example_importances_nlargest_n_it)
-            .index)
+        if self.strategy_sr == 'drop_positive_means':
+            drop_ix = ccbcv.example_importances_df.query(expr='mean > 0').index
+        elif self.strategy_sr == 'drop_positive_lcis':
+            drop_ix = ccbcv.example_importances_df.query(expr='lci > 0').index
         keep_ix = examples_ix.difference(other=drop_ix)
         return examples_ix, drop_ix, keep_ix
-
+    
     def _get_result(
-            self,
-            iteration_it: int,
-            score_ft: float,
+            self, 
+            iteration_it: int, 
+            score_ft: float, 
             pct_diff_ft: float,
-            examples_ix: pd.Index,
-            drop_ix: pd.Index,
+            examples_ix: pd.Index, 
+            drop_ix: pd.Index, 
             keep_ix: pd.Index):
         '''
         Gets result
@@ -1459,7 +1215,7 @@ class ExampleSelector:
         score_ft : float
             Current score.
         pct_diff_ft : float
-            Current percent difference between train and validation eval metrics.
+            Current percent difference.
         examples_ix : pd.Index
             Examples.
         drop_ix : pd.Index
@@ -1484,9 +1240,9 @@ class ExampleSelector:
             'best_scores': self.best_score_ft,
             'examples': examples_ix}
         return result_dt
-
+    
     def _print_result(
-            self,
+            self, 
             result_dt: dict):
         '''
         Prints result
@@ -1505,7 +1261,7 @@ class ExampleSelector:
         for key_sr in result_dt.keys():
             if key_sr != 'examples':
                 print('- {}: {}'.format(key_sr, result_dt[key_sr]))
-
+    
     def _get_results(self):
         '''
         Gets results
@@ -1518,7 +1274,7 @@ class ExampleSelector:
         '''
         results_df = pd.DataFrame(data=self.results_lt).set_index(keys='iterations')
         return results_df
-
+    
     def _get_ranks(self):
         '''
         Gets ranks
@@ -1538,10 +1294,10 @@ class ExampleSelector:
                 combined = lambda x: x.sum(axis=1))
             .rename(columns=lambda x: f'{x}_rank'))
         return ranks_df
-
+    
     def _get_best_iteration(self):
         '''
-        Gets best iteration based on combined or weighted rank
+        Gets best iteration
 
         Returns
         -------
@@ -2202,8 +1958,9 @@ class FeatureSelector:
             self, 
             X: pd.DataFrame, 
             y: pd.Series,
+            split_dt: dict = dict(),
             fit_dt: dict = dict(), 
-            split_dt: dict = dict()):
+            sample_dt: dict = None):
         '''
         Fits models, stores metadata, and drops features
 
@@ -2213,10 +1970,12 @@ class FeatureSelector:
             Feature matrix.
         y : pd.Series
             Target vector.
-        fit_dt : dict, optional
-            Fit params. The default is dict().
         split_dt : dict, optional
             Split params (e.g., groups). The default is dict().
+        fit_dt : dict, optional
+            Fit params. The default is dict().
+        sample_dt : dict, optional
+            Sample params. The default is None.
 
         Returns
         -------
@@ -2245,7 +2004,7 @@ class FeatureSelector:
             
             # Fit model
             ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
-            ccbcv.fit(X=X, y=y, fit_dt=fit_dt, split_dt=split_dt)
+            ccbcv.fit(X=X, y=y, split_dt=split_dt, fit_dt=fit_dt, sample_dt=sample_dt)
             if self.store_models_bl:
                 self.models_lt.append(ccbcv)
             
