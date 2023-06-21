@@ -2535,7 +2535,7 @@ def get_parameters(
         model_defaults_dt = {
             'loss_function': 'Logloss',
             'eval_metric': 'Logloss',
-            'custom_metric': ['Logloss', 'AUC', 'Precision', 'Recall']}
+            'custom_metric': ['Logloss', 'PRAUC', 'Precision', 'Recall']}
         general_defaults_dt.update(model_defaults_dt)
     elif model_type_sr == 'regression':
         model_defaults_dt = {
