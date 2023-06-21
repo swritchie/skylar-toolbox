@@ -178,6 +178,36 @@ def plot_histogram(
     return ax
 
 # =============================================================================
+# plot_line
+# =============================================================================
+
+def plot_line(
+        ss: pd.Series, 
+        table_bbox_lt: list = [1.25, 0, 0.25, 1]):
+    '''
+    Plots line
+
+    Parameters
+    ----------
+    ss : pd.Series
+        Data to plot
+    table_bbox_lt : list, optional
+        Bounding box for table. The default is [1.25, 0, 0.25, 1].
+
+    Returns
+    -------
+    ax : plt.Axes
+        Axis
+
+    '''
+    ax = ss.sort_values(ascending=False).plot()
+    ax.set(xticks=[])
+    ax.axhline(y=0, c='k', ls=':')
+    data_ss = ss.describe().round(decimals=3)
+    pd.plotting.table(ax=ax, data=data_ss, bbox=table_bbox_lt)
+    return ax
+
+# =============================================================================
 # plot_time_series
 # =============================================================================
 
