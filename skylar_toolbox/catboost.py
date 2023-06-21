@@ -1003,8 +1003,8 @@ class ExampleSelector:
             (keep_ix.empty)):
                 break
             else:
-                X.drop(columns=drop_ix, inplace=True)
-                y.drop(columns=drop_ix, inplace=True)
+                X.drop(index=drop_ix, inplace=True)
+                y.drop(index=drop_ix, inplace=True)
                 iteration_it += 1
         return self
 
