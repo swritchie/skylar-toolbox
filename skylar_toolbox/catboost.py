@@ -2173,7 +2173,7 @@ class FeatureSelector:
             # Evaluate whether to continue
             if ((iteration_it - self.best_iteration_it == self.wait_it) or 
             (drop_ix.empty) or
-            (keep_ix.empty)):
+            (keep_ix.difference(other=ccbcv.cat_boost_dt['ignored_features']).empty)):
                 break
             else:
                 X.drop(columns=drop_ix, inplace=True)
