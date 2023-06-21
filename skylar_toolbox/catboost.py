@@ -106,13 +106,9 @@ class CustomCatBoost:
         # Get and compare eval metrics
         self.eval_metrics_df = self._compare_eval_metrics()
         
-        # Get and compare LFC feature importances
-        self.lfc_feature_importances_df = self._compare_feature_importances(
-            X_train=X_train, X_valid=X_valid, type_sr='LossFunctionChange')
-        
-        # Get and compare PVC feature importances
-        self.pvc_feature_importances_df = self._compare_feature_importances(
-            X_train=X_train, X_valid=X_valid, type_sr='PredictionValuesChange')
+        # Get and compare feature importances
+        self.feature_importances_df = self._compare_feature_importances(
+            X_train=X_train, X_valid=X_valid)
         
         # Get interaction strengths
         if X_train.shape[1] > 1:
@@ -155,22 +151,17 @@ class CustomCatBoost:
     
     def plot_feature_importances(
             self, 
-            importance_type_sr: str, 
             plot_type_sr: str):
         '''
         Plots feature importances
 
         Parameters
         ----------
-        importance_type_sr : str
-            Importance type.
         plot_type_sr : str
             Plot type.
 
         Raises
         ------
-        ValueError
-            Permitted values of importance_type_sr are ['LossFunctionChange', 'PredictionValuesChange']
         NotImplementedError
             Implemented values of plot_type_sr are ['all', 'top_bottom', 'abs_diff', 'pct_diff']
 
@@ -180,18 +171,11 @@ class CustomCatBoost:
             Figure.
 
         '''
-        permitted_importance_types_lt = ['LossFunctionChange', 'PredictionValuesChange']
-        if importance_type_sr == 'LossFunctionChange':
-            feature_importances_df = self.lfc_feature_importances_df
-        elif importance_type_sr == 'PredictionValuesChange':
-            feature_importances_df = self.pvc_feature_importances_df
-        else:
-            raise ValueError(f'Permitted values of importance_type_sr are {permitted_importance_types_lt}')
         implemented_plot_types_lt = ['all', 'top_bottom', 'abs_diff', 'pct_diff']
         if plot_type_sr == 'all':
             columns_lt = ['learn', 'validation', 'pct_diff']
-            plot_df = feature_importances_df[columns_lt[:-1]]
-            data_df = feature_importances_df[columns_lt].describe().round(decimals=3)
+            plot_df = self.feature_importances_df[columns_lt[:-1]]
+            data_df = self.feature_importances_df[columns_lt].describe().round(decimals=3)
             ax = plot_df.plot()
             ax.set(xticks=[])
             ax.axhline(y=0, c='k', ls=':')
@@ -202,15 +186,15 @@ class CustomCatBoost:
             fig, axes = plt.subplots(nrows=2, sharex=True)
             for index_it, split_sr in enumerate(iterable=['learn', 'validation']):
                 pd.concat(objs=[
-                    feature_importances_df[split_sr].nsmallest(),
-                    feature_importances_df[split_sr].nlargest()[::-1]]).plot(kind='barh', ax=axes[index_it])
+                    self.feature_importances_df[split_sr].nsmallest(),
+                    self.feature_importances_df[split_sr].nlargest()[::-1]]).plot(kind='barh', ax=axes[index_it])
                 axes[index_it].axvline(x=0, c='k', ls=':')
                 axes[index_it].set(title=split_sr)
             fig.tight_layout()
             return fig
         elif plot_type_sr in ['abs_diff', 'pct_diff']:
-            top_bottom_df = feature_importances_df.nlargest(n=10, columns=plot_type_sr) if plot_type_sr == 'abs_diff' \
-                else feature_importances_df.nsmallest(n=10, columns=plot_type_sr)
+            top_bottom_df = self.feature_importances_df.nlargest(n=10, columns=plot_type_sr) if plot_type_sr == 'abs_diff' \
+                else self.feature_importances_df.nsmallest(n=10, columns=plot_type_sr)
             ax = (
                 top_bottom_df
                 .sort_values(by=plot_type_sr, ascending=True if plot_type_sr == 'abs_diff' else False)
@@ -370,7 +354,6 @@ class CustomCatBoost:
             self, 
             X: pd.DataFrame, 
             y: pd.Series, 
-            type_sr: str, 
             name_sr: str):
         '''
         Gets feature importances
@@ -381,8 +364,6 @@ class CustomCatBoost:
             Feature matrix.
         y : pd.Series
             Target vector.
-        type_sr : str
-            Importance type.
         name_sr : str
             Split name.
 
@@ -394,7 +375,7 @@ class CustomCatBoost:
         '''
         feature_importances_ay = self.cbm.get_feature_importance(
             data=cb.Pool(data=X, label=y, cat_features=self.cat_boost_dt['cat_features']), 
-            type=type_sr)
+            type='LossFunctionChange')
         feature_importances_ss = pd.Series(
             data=feature_importances_ay,
             index=X.columns,
@@ -404,8 +385,7 @@ class CustomCatBoost:
     def _compare_feature_importances(
             self, 
             X_train: pd.DataFrame, 
-            X_valid: pd.DataFrame, 
-            type_sr: str):
+            X_valid: pd.DataFrame):
         '''
         Compares train and validation feature importances
 
@@ -415,8 +395,6 @@ class CustomCatBoost:
             Train feature matrix.
         X_valid : pd.DataFrame
             Validation feature matrix.
-        type_sr : str
-            Importance type.
 
         Returns
         -------
@@ -425,7 +403,7 @@ class CustomCatBoost:
 
         '''
         objs_lt = [
-            self._get_feature_importances(X=X, y=y, type_sr=type_sr, name_sr=name_sr)
+            self._get_feature_importances(X=X, y=y, name_sr=name_sr)
             for X, y, name_sr in [(X_train, self.y_train, 'learn'), (X_valid, self.y_valid, 'validation')]]
         feature_importances_df = steda.get_differences(
             df=pd.concat(objs=objs_lt, axis=1).sort_values(by='validation', ascending=False),
@@ -557,11 +535,8 @@ class CustomCatBoostCV:
         # Compare eval metrics
         self.eval_metrics_df = self._compare_eval_metrics()
         
-        # Compare LFC feature importances
-        self.lfc_feature_importances_df = self._compare_feature_importances(type_sr='LossFunctionChange')
-        
-        # Compare PVC feature importances
-        self.pvc_feature_importances_df = self._compare_feature_importances(type_sr='PredictionValuesChange')
+        # Compare feature importances
+        self.feature_importances_df = self._compare_feature_importances()
         return self
     
     def sum_models(
@@ -618,22 +593,17 @@ class CustomCatBoostCV:
     
     def plot_feature_importances(
             self, 
-            importance_type_sr: str, 
             plot_type_sr: str):
         '''
         Plots feature importances with error bars
 
         Parameters
         ----------
-        importance_type_sr : str
-            Importance type.
         plot_type_sr : str
             Plot type.
 
         Raises
         ------
-        ValueError
-            Permitted values of importance_type_sr are ['LossFunctionChange', 'PredictionValuesChange']
         NotImplementedError
             Implemented values of plot_type_sr are ['all', 'top_bottom']
 
@@ -643,15 +613,8 @@ class CustomCatBoostCV:
             Figure.
 
         '''
-        permitted_importance_types_lt = ['LossFunctionChange', 'PredictionValuesChange']
-        if importance_type_sr == 'LossFunctionChange':
-            feature_importances_df = self.lfc_feature_importances_df
-        elif importance_type_sr == 'PredictionValuesChange':
-            feature_importances_df = self.pvc_feature_importances_df
-        else:
-            raise ValueError(f'Permitted values of importance_type_sr are {permitted_importance_types_lt}')
-        xs_df = ys_df = feature_importances_df.filter(like='_mean').rename(columns=lambda x: x.split('_')[0])
-        xerrs_df = yerrs_df = feature_importances_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
+        xs_df = ys_df = self.feature_importances_df.filter(like='_mean').rename(columns=lambda x: x.split('_')[0])
+        xerrs_df = yerrs_df = self.feature_importances_df.filter(like='se2').rename(columns=lambda x: x.split('_')[0])
         implemented_plot_types_lt = ['all', 'top_bottom']
         if plot_type_sr == 'all':
             data_df = ys_df.describe().round(decimals=3)
@@ -713,16 +676,9 @@ class CustomCatBoostCV:
         eval_metrics_df = steda.get_differences(df=eval_metrics_df, columns_lt=['learn_mean', 'validation_mean'])
         return eval_metrics_df
     
-    def _compare_feature_importances(
-            self, 
-            type_sr: str):
+    def _compare_feature_importances(self):
         '''
         Compares train and validation feature importances
-
-        Parameters
-        ----------
-        type_sr : str
-            Importance type.
 
         Returns
         -------
@@ -731,16 +687,10 @@ class CustomCatBoostCV:
 
         '''
         # Concatenate them
-        if type_sr == 'LossFunctionChange':
-            feature_importances_df = pd.concat(objs=[
-                ccb.lfc_feature_importances_df[['learn', 'validation']].rename(columns=lambda x: f'{x}_{index_it}')
-                for index_it, ccb in enumerate(iterable=self.models_lt)
-            ], axis=1)
-        elif type_sr == 'PredictionValuesChange':
-            feature_importances_df = pd.concat(objs=[
-                ccb.pvc_feature_importances_df[['learn', 'validation']].rename(columns=lambda x: f'{x}_{index_it}')
-                for index_it, ccb in enumerate(iterable=self.models_lt)
-            ], axis=1)
+        feature_importances_df = pd.concat(objs=[
+            ccb.feature_importances_df[['learn', 'validation']].rename(columns=lambda x: f'{x}_{index_it}')
+            for index_it, ccb in enumerate(iterable=self.models_lt)
+        ], axis=1)
         # Get means
         for split_sr in ['learn', 'validation']:
             feature_importances_df = (
@@ -1575,18 +1525,18 @@ class FeatureInspector:
         # Sort columns
         X = X[self.features_lt]
         
-        # Get LFC feature importances by tree
-        self.lfc_feature_importances_by_tree_df = self._get_lfc_feature_importances_by_tree(X=X, y=y)
+        # Get feature importances by tree
+        self.feature_importances_by_tree_df = self._get_feature_importances_by_tree(X=X, y=y)
         
         # Join importances to splits
         self._join_importances_to_splits()
         
-        # Get LFC feature importances by feature, tree, and border
-        self.lfc_feature_importances_by_feature_tree_and_border_df = \
-            self._get_lfc_feature_importances_by_feature_tree_and_border()
+        # Get feature importances by feature, tree, and border
+        self.feature_importances_by_feature_tree_and_border_df = \
+            self._get_feature_importances_by_feature_tree_and_border()
         
-        # Get LFC feature importances by feature and border
-        self.lfc_feature_importances_by_feature_and_border_df = self._get_lfc_feature_importances_by_feature_and_border()
+        # Get feature importances by feature and border
+        self.feature_importances_by_feature_and_border_df = self._get_feature_importances_by_feature_and_border()
         
         # Get SHAPs
         shaps_df = self._get_shaps(X=X, y=y)
@@ -1601,11 +1551,11 @@ class FeatureInspector:
         self.twoway_shaps_dt = self._get_shaps_by_features(X=X, shaps_df=shaps_df)
         return self
     
-    def plot_lfc_feature_importances_by_tree(
+    def plot_feature_importances_by_tree(
             self, 
             feature_sr: str):
         '''
-        Plots LFC feature importance by tree for given feature
+        Plots feature importance by tree for given feature
 
         Parameters
         ----------
@@ -1618,18 +1568,18 @@ class FeatureInspector:
             Figure.
 
         '''
-        plot_ss = self.lfc_feature_importances_by_tree_df[feature_sr]
+        plot_ss = self.feature_importances_by_tree_df[feature_sr]
         data_ss = plot_ss.describe().round(decimals=3)
         ax = plot_ss.plot(marker='.', drawstyle='steps-mid')
         pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig = ax.figure
         return fig
     
-    def plot_lfc_feature_importances_by_border(
+    def plot_feature_importances_by_border(
             self, 
             feature_sr: str):
         '''
-        Plots LFC feature importance by border for given float feature
+        Plots feature importance by border for given float feature
 
         Parameters
         ----------
@@ -1642,7 +1592,7 @@ class FeatureInspector:
             Figure.
 
         '''
-        grouped_df = self.lfc_feature_importances_by_feature_and_border_df.loc[feature_sr, :]
+        grouped_df = self.feature_importances_by_feature_and_border_df.loc[feature_sr, :]
         ax = self._plot_group_means(grouped_df=grouped_df, sort_bl=False)
         ax.set(title=feature_sr)
         fig = ax.figure
@@ -1765,12 +1715,12 @@ class FeatureInspector:
                 .drop(columns='feature_index'))
         return splits_df
     
-    def _get_lfc_feature_importances_by_tree(
+    def _get_feature_importances_by_tree(
             self, 
             X: pd.DataFrame, 
             y: pd.Series):
         '''
-        Gets LFC feature importances by tree
+        Gets feature importances by tree
 
         Parameters
         ----------
@@ -1785,13 +1735,13 @@ class FeatureInspector:
             DESCRIPTION.
 
         '''
-        def _get_lfc_feature_importances(
+        def _get_feature_importances(
                 cbm: cb.CatBoost, 
                 X: pd.DataFrame, 
                 y: pd.Series, 
                 cat_features_lt: list):
             '''
-            Gets LFC feature importances
+            Gets feature importances
 
             Parameters
             ----------
@@ -1806,24 +1756,24 @@ class FeatureInspector:
 
             Returns
             -------
-            lfc_feature_importances_ss : pd.Series
-                LFC feature importances.
+            feature_importances_ss : pd.Series
+                feature importances.
 
             '''
-            lfc_feature_importances_ay = cbm.get_feature_importance(
+            feature_importances_ay = cbm.get_feature_importance(
                 data=cb.Pool(data=X, label=y, cat_features=cat_features_lt), 
                 type='LossFunctionChange')
-            lfc_feature_importances_ss = pd.Series(data=lfc_feature_importances_ay, index=X.columns, name='importances')
-            return lfc_feature_importances_ss
-        lfc_feature_importances_lt = []
-        desc_sr = 'Get LFC feature importances by tree'
+            feature_importances_ss = pd.Series(data=feature_importances_ay, index=X.columns, name='importances')
+            return feature_importances_ss
+        feature_importances_lt = []
+        desc_sr = 'Get feature importances by tree'
         for tree_index_it in tqdm.tqdm(iterable=range(self.ccb.cbm.tree_count_), desc=desc_sr):
             cbm2 = self.ccb.cbm.copy()
             cbm2.shrink(ntree_start=tree_index_it, ntree_end=tree_index_it + 1)
-            lfc_feature_importances_ss = _get_lfc_feature_importances(cbm=cbm2, X=X, y=y, cat_features_lt=self.cat_features_lt)
-            lfc_feature_importances_lt.append(lfc_feature_importances_ss)
-        lfc_feature_importances_by_tree_df = pd.concat(objs=lfc_feature_importances_lt, axis=1, ignore_index=True).T
-        return lfc_feature_importances_by_tree_df
+            feature_importances_ss = _get_feature_importances(cbm=cbm2, X=X, y=y, cat_features_lt=self.cat_features_lt)
+            feature_importances_lt.append(feature_importances_ss)
+        feature_importances_by_tree_df = pd.concat(objs=feature_importances_lt, axis=1, ignore_index=True).T
+        return feature_importances_by_tree_df
     
     def _join_importances_to_splits(self):
         '''
@@ -1837,7 +1787,7 @@ class FeatureInspector:
         '''
         desc_sr = 'Join importances to splits'
         for float_feature_sr in tqdm.tqdm(iterable=self.float_features_df['feature_id'], desc=desc_sr):
-            float_feature_importances_ss = self.lfc_feature_importances_by_tree_df[float_feature_sr]
+            float_feature_importances_ss = self.feature_importances_by_tree_df[float_feature_sr]
             float_feature_importances_df = (
                 float_feature_importances_ss
                 .reset_index()
@@ -1855,9 +1805,9 @@ class FeatureInspector:
                     .drop(columns=['importances_x', 'importances_y']))
         return self
     
-    def _get_lfc_feature_importances_by_feature_tree_and_border(self):
+    def _get_feature_importances_by_feature_tree_and_border(self):
         '''
-        Gets LFC feature importances by feature, tree, and border
+        Gets feature importances by feature, tree, and border
 
         Returns
         -------
@@ -1884,29 +1834,29 @@ class FeatureInspector:
                 in_df[['tree_index', 'border', 'importances']]
                 .assign(bad_flag = lambda x: x['importances'] < 0))
             return out_df
-        lfc_feature_importances_by_feature_tree_and_border_df = (
+        feature_importances_by_feature_tree_and_border_df = (
             self.splits_df
             .groupby(by='feature_id', group_keys=True)
             .apply(func=_apply_func))
-        return lfc_feature_importances_by_feature_tree_and_border_df
+        return feature_importances_by_feature_tree_and_border_df
     
-    def _get_lfc_feature_importances_by_feature_and_border(self):
+    def _get_feature_importances_by_feature_and_border(self):
         '''
-        Gets LFC feature importances by feature and border
+        Gets feature importances by feature and border
 
         Returns
         -------
-        lfc_feature_importances_by_feature_and_border_df : pd.DataFrame
-            LFC feature importances.
+        feature_importances_by_feature_and_border_df : pd.DataFrame
+            Feature importances.
 
         '''
-        lfc_feature_importances_by_feature_and_border_df = (
+        feature_importances_by_feature_and_border_df = (
             steda.get_group_means(
-                df=self.lfc_feature_importances_by_feature_tree_and_border_df.reset_index(), 
+                df=self.feature_importances_by_feature_tree_and_border_df.reset_index(), 
                 groupby_by_lt=['feature_id', 'border'], 
                 column_sr='importances')
             .assign(bad_mean_flag = lambda x: x['mean'] < 0))
-        return lfc_feature_importances_by_feature_and_border_df
+        return feature_importances_by_feature_and_border_df
     
     def _get_shaps(
             self, 
@@ -2421,13 +2371,13 @@ class FeatureSelector:
         '''
         features_ix = X.columns
         if self.strategy_sr == 'drop_nonpositive_means':
-            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean <= 0').index
+            drop_ix = ccbcv.feature_importances_df.query(expr='validation_mean <= 0').index
         elif self.strategy_sr == 'drop_negative_means':
-            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_mean < 0').index
+            drop_ix = ccbcv.feature_importances_df.query(expr='validation_mean < 0').index
         elif self.strategy_sr == 'drop_negative_ucis':
-            drop_ix = ccbcv.lfc_feature_importances_df.query(expr='validation_uci < 0').index
+            drop_ix = ccbcv.feature_importances_df.query(expr='validation_uci < 0').index
         elif self.strategy_sr == 'drop_nsmallest_means':
-            drop_ix = ccbcv.lfc_feature_importances_df['validation_mean'].nsmallest(n=self.losses_nsmallest_n_it).index
+            drop_ix = ccbcv.feature_importances_df['validation_mean'].nsmallest(n=self.losses_nsmallest_n_it).index
         drop_ix = drop_ix.difference(other=ccbcv.cat_boost_dt['ignored_features'])
         keep_ix = features_ix.difference(other=drop_ix)
         return features_ix, drop_ix, keep_ix
