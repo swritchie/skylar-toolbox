@@ -531,8 +531,9 @@ class CustomCatBoostCV:
             self, 
             X: pd.DataFrame, 
             y: pd.Series, 
+            split_dt: dict = dict(),
             fit_dt: dict = dict(), 
-            split_dt: dict = dict()):
+            sample_dt: dict = None):
         '''
         Fits model and stores metadata
 
@@ -542,10 +543,12 @@ class CustomCatBoostCV:
             Feature matrix.
         y : pd.Series
             Target vector.
-        fit_dt : dict, optional
-            Fit params. The default is dict().
         split_dt : dict, optional
             Split params (e.g., groups). The default is dict().
+        fit_dt : dict, optional
+            Fit params. The default is dict().
+        sample_dt : dict, optional
+            Sample params for getting example importances. The default is None.
 
         Returns
         -------
@@ -576,11 +579,10 @@ class CustomCatBoostCV:
             # Fit model
             ccb = CustomCatBoost(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt)
             ccb.fit(
-                X_train=X.iloc[train_ay, :],
-                y_train=y.iloc[train_ay], 
-                X_valid=X.iloc[test_ay, :], 
-                y_valid=y.iloc[test_ay], 
-                fit_dt=fit_dt)
+                X_train=X.iloc[train_ay, :], y_train=y.iloc[train_ay], 
+                X_valid=X.iloc[test_ay, :], y_valid=y.iloc[test_ay], 
+                fit_dt=fit_dt, 
+                sample_dt=sample_dt)
             self.models_lt.append(ccb)
         
         # Compare eval metrics
@@ -689,6 +691,27 @@ class CustomCatBoostCV:
         else:
             raise NotImplementedError(f'Implemented values of plot_type_sr are {implemented_plot_types_lt}')
             
+    def plot_example_importances(self):
+        '''
+        Plots example importances with error bars
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        data_ss = self.example_importances_df['mean'].describe().round(decimals=3)
+        ax = (
+            self.example_importances_df
+            .sort_values(by='mean', ascending=False)
+            .plot(y='mean', yerr='se2'))
+        ax.set(xticks=[])
+        ax.axhline(y=0, c='k', ls=':')
+        pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        fig = ax.figure
+        return fig
+            
     def delete_predictions_and_targets(self):
         '''
         Deletes predictions and targets
@@ -752,6 +775,29 @@ class CustomCatBoostCV:
         # Get differences
         feature_importances_df = steda.get_differences(df=feature_importances_df, columns_lt=['learn_mean', 'validation_mean'])
         return feature_importances_df
+    
+    def _compare_example_importances(self):
+        '''
+        Compares example importances
+
+        Returns
+        -------
+        example_importances_df : pd.DataFrame
+            Example importances.
+
+        '''
+        # Concatenate them
+        example_importances_df = pd.concat(objs=[
+            ccb.example_importances_ss.rename(index=index_it)
+            for index_it, ccb in enumerate(iterable=self.models_lt)
+        ], axis=1)
+        # Get means
+        example_importances_df = steda.get_means(
+            df=example_importances_df, 
+            columns_lt=example_importances_df.columns.tolist())
+        # Sort
+        example_importances_df.sort_values(by='mean', ascending=False, inplace=True)
+        return example_importances_df
     
 # =============================================================================
 # DifferenceCallback
