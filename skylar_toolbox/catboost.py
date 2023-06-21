@@ -590,18 +590,22 @@ class CustomCatBoostCV:
         
         # Compare feature importances
         self.feature_importances_df = self._compare_feature_importances()
+        
+        # Compare example importances
+        if sample_dt:
+            self.example_importances_df = self._compare_example_importances()
         return self
     
     def sum_models(
             self, 
-            strategy_sr: str = 'weight_equally'):
+            strategy_sr: str = 'weight_by_score'):
         '''
         Ensembles models trained on different subsets of data
 
         Parameters
         ----------
         strategy_sr : str, optional
-            Strategy for weighting models in ensemble. The default is 'weight equally'.
+            Strategy for weighting models in ensemble. The default is 'weight_by_score'.
 
         Raises
         ------
