@@ -967,7 +967,7 @@ class ExampleSelector:
             
             # Update parameters
             output_subdirectory_sr = '{}/{:03d}'.format(output_directory_sr, iteration_it)
-            self._update_params(X=X, train_dir_sr=output_subdirectory_sr)
+            self._update_params(train_dir_sr=output_subdirectory_sr)
             
             # Fit model
             ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
