@@ -2342,7 +2342,7 @@ def get_parameters(
     '''
     general_defaults_dt = {
         'cat_features': [],
-        'early_stopping_rounds': 100,
+        'early_stopping_rounds': 10,
         'ignored_features': [],
         'iterations': 1_000,
         'monotone_constraints': {},
