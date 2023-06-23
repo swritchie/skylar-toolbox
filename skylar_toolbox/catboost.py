@@ -804,56 +804,6 @@ class CustomCatBoostCV:
         return example_importances_df
     
 # =============================================================================
-# DifferenceCallback
-# =============================================================================
-
-class DifferenceCallback:
-    def __init__(
-        self, 
-        metric_sr: str, 
-        threshold_ft: float = 0.01):
-        '''
-        Stops training when difference between learn and validation metrics surpasses threshold
-
-        Parameters
-        ----------
-        metric_sr : str
-            Metric.
-        threshold_ft : float, optional
-            Threshold. The default is 0.01.
-
-        Returns
-        -------
-        None.
-
-        '''
-        self.metric_sr = metric_sr
-        self.threshold_ft = threshold_ft
-    
-    def after_iteration(
-            self, 
-            info):
-        '''
-        Checks whether to stop
-
-        Parameters
-        ----------
-        info : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        continue_bl : bool
-            Flag for whether to continue.
-
-        '''
-        learn_metric_ft = info.metrics['learn'][self.metric_sr][-1]
-        validation_metric_ft = info.metrics['validation'][self.metric_sr][-1]
-        difference_ft = np.abs(validation_metric_ft - learn_metric_ft)
-        continue_bl = difference_ft < self.threshold_ft
-        return continue_bl
-    
-# =============================================================================
 # ExampleSelector
 # =============================================================================
     
