@@ -2344,7 +2344,7 @@ def get_parameters(
         'cat_features': [],
         'early_stopping_rounds': 10,
         'ignored_features': [],
-        'iterations': 1_000,
+        'iterations': 100,
         'monotone_constraints': {},
         'random_seed': 0,
         'task_type': 'CPU', 
@@ -2367,4 +2367,3 @@ def get_parameters(
     general_defaults_dt.update(cat_boost_dt)
     general_defaults_dt['verbose'] = general_defaults_dt['iterations'] // 10
     return general_defaults_dt
-    
