@@ -25,8 +25,7 @@ class AggregationEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
             features_ix: pd.Index,
             fit_dt: dict = dict(random_state=0),
             aggregations_lt: list = ['min', 'median', 'mean', 'max', 'std', 'sum'],
-            name_sr: str = None, 
-            drop_originals_bl: bool = False):
+            name_sr: str = None):
         '''
         Selects and engineers aggregations that are better than originals
 
@@ -42,8 +41,6 @@ class AggregationEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
             Aggregations to try. The default is ['min', 'median', 'mean', 'max', 'std', 'sum'].
         name_sr : str, optional
             Output column name. The default is None.
-        drop_originals_bl : bool, optional
-            Flag for whether to drop originals. The default is False.
 
         Raises
         ------
@@ -63,7 +60,6 @@ class AggregationEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
         self.fit_dt = fit_dt
         self.aggregations_lt = aggregations_lt
         self.name_sr = name_sr
-        self.drop_originals_bl = drop_originals_bl
         
     def fit(
             self, 
@@ -145,10 +141,6 @@ class AggregationEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
             
             # Join
             X = X.join(other=X_agg)
-        
-        # If dropping originals...
-        if self.drop_originals_bl:
-            X.drop(columns=self.features_ix, inplace=True)
         return X
     
     def plot(self):
