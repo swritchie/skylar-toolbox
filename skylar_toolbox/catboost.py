@@ -814,7 +814,7 @@ class ExampleSelector:
             cat_boost_dt: dict, 
             sklearn_splitter, 
             objective_sr: str = 'minimize', 
-            strategy_sr: str = 'drop_positive_lcis', 
+            strategy_sr: str = 'drop_positive_means', 
             wait_it: int = 10, 
             store_models_bl: bool = False):
         '''
@@ -1846,7 +1846,7 @@ class FeatureSelector:
             cat_boost_dt: dict, 
             sklearn_splitter, 
             objective_sr: str = 'minimize', 
-            strategy_sr: str = 'drop_nsmallest_means', 
+            strategy_sr: str = 'drop_negative_means', 
             wait_it: int = 10, 
             store_models_bl: bool = False,
             losses_nsmallest_n_it: int = 1):
@@ -1864,7 +1864,7 @@ class FeatureSelector:
         objective_sr : str, optional
             Objective for eval metric. The default is 'minimize'.
         strategy_sr : str, optional
-            Strategy for dropping features. The default is 'drop_nsmallest_means'.
+            Strategy for dropping features. The default is 'drop_negative_means'.
         wait_it : int, optional
             Number of iterations to wait before terminating procedure. The default is 10.
         store_models_bl : bool, optional
