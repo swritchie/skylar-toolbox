@@ -1269,7 +1269,7 @@ class FeatureInspector:
     def __init__(
             self, 
             ccb: CustomCatBoost, 
-            interaction_strengths_threshold_ft: float):
+            strengths_nlargest_it: int = 10):
         '''
         Stores metadata and provides plotting methods
 
@@ -1277,8 +1277,8 @@ class FeatureInspector:
         ----------
         ccb : CustomCatBoost
             Model.
-        interaction_strengths_threshold_ft : float
-            Threshold for meaningful interactions.
+        strengths_nlargest_it : int, optional
+            Interactions to plot. The default is 10
 
         Returns
         -------
@@ -1286,7 +1286,7 @@ class FeatureInspector:
 
         '''
         self.ccb = ccb
-        self.interaction_strengths_threshold_ft = interaction_strengths_threshold_ft
+        self.strengths_nlargest_it = strengths_nlargest_it
     
     def fit(
             self, 
@@ -1797,7 +1797,8 @@ class FeatureInspector:
         twoway_shaps_dt = {}
         interactions_ra = (
             self.ccb.interaction_strengths_df
-            .query(expr=f'strengths > {self.interaction_strengths_threshold_ft}')[['first_features', 'second_features']]
+            .nlargest(n=self.strengths_nlargest_it, columns='strengths')
+            .loc[:, ['first_features', 'second_features']]
             .to_records(index=False))
         desc_sr = 'Get SHAPs by features'
         for features_rd in tqdm.tqdm(iterable=interactions_ra, desc=desc_sr):
