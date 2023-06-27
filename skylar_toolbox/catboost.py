@@ -1269,7 +1269,7 @@ class FeatureInspector:
     def __init__(
             self, 
             ccb: CustomCatBoost, 
-            strengths_nlargest_it: int = 10):
+            strengths_nlargest_n_it: int = 10):
         '''
         Stores metadata and provides plotting methods
 
@@ -1277,7 +1277,7 @@ class FeatureInspector:
         ----------
         ccb : CustomCatBoost
             Model.
-        strengths_nlargest_it : int, optional
+        strengths_nlargest_n_it : int, optional
             Interactions to plot. The default is 10
 
         Returns
@@ -1286,7 +1286,7 @@ class FeatureInspector:
 
         '''
         self.ccb = ccb
-        self.strengths_nlargest_it = strengths_nlargest_it
+        self.strengths_nlargest_n_it = strengths_nlargest_n_it
     
     def fit(
             self, 
@@ -1797,7 +1797,7 @@ class FeatureInspector:
         twoway_shaps_dt = {}
         interactions_ra = (
             self.ccb.interaction_strengths_df
-            .nlargest(n=self.strengths_nlargest_it, columns='strengths')
+            .nlargest(n=self.strengths_nlargest_n_it, columns='strengths')
             .loc[:, ['first_features', 'second_features']]
             .to_records(index=False))
         desc_sr = 'Get SHAPs by features'
