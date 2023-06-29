@@ -927,7 +927,8 @@ class ExampleSelector:
             ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
             try:
                 ccbcv.fit(X=X, y=y, split_dt=split_dt, fit_dt=fit_dt, sample_dt=sample_dt)
-            except:
+            except Exception as en:
+                print(en.__class__.__name__, en)
                 break
             if self.store_models_bl:
                 self.models_lt.append(ccbcv)
@@ -1967,7 +1968,11 @@ class FeatureSelector:
             
             # Fit model
             ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
-            ccbcv.fit(X=X, y=y, split_dt=split_dt, fit_dt=fit_dt, sample_dt=sample_dt)
+            try:
+                ccbcv.fit(X=X, y=y, split_dt=split_dt, fit_dt=fit_dt, sample_dt=sample_dt)
+            except Exception as en:
+                print(en.__class__.__name__, en)
+                break
             if self.store_models_bl:
                 self.models_lt.append(ccbcv)
             
