@@ -881,7 +881,7 @@ class ExampleSelector:
             y: pd.Series,
             split_dt: dict = dict(),
             fit_dt: dict = dict(), 
-            sample_dt: dict = dict(n=1_000)):
+            sample_dt: dict = dict(n=1_000, random_state=0)):
         '''
         Fits models, stores metadata, and drops examples
 
@@ -896,7 +896,7 @@ class ExampleSelector:
         fit_dt : dict, optional
             Fit params. The default is dict().
         sample_dt : dict, optional
-            Sample params. The default is dict(n=1_000).
+            Sample params. The default is dict(n=1_000, random_state=0).
 
         Returns
         -------
