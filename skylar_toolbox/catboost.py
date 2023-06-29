@@ -816,7 +816,8 @@ class ExampleSelector:
             objective_sr: str = 'minimize', 
             strategy_sr: str = 'drop_positive_means', 
             wait_it: int = 10, 
-            store_models_bl: bool = False):
+            store_models_bl: bool = False, 
+            fit_only_wait_bl: bool = False):
         '''
         Selects examples by iteratively removing those contributing most to validation losses
 
@@ -836,6 +837,8 @@ class ExampleSelector:
             Number of iterations to wait before terminating procedure. The default is 10.
         store_models_bl : bool, optional
             Flag for whether to store during procedure to save memory. The default is False.
+        fit_only_wait_bl : bool, optional
+            Flag for whether to fit only as many iterations as wait. The default is False.
 
         Raises
         ------
@@ -870,6 +873,7 @@ class ExampleSelector:
         self.strategy_sr = strategy_sr
         self.wait_it = wait_it
         self.store_models_bl = store_models_bl
+        self.fit_only_wait_bl = fit_only_wait_bl
         
     def fit(
             self, 
@@ -877,7 +881,7 @@ class ExampleSelector:
             y: pd.Series,
             split_dt: dict = dict(),
             fit_dt: dict = dict(), 
-            sample_dt: dict = dict(n=1_000)):
+            sample_dt: dict = dict(n=1_000, random_state=0)):
         '''
         Fits models, stores metadata, and drops examples
 
@@ -892,7 +896,7 @@ class ExampleSelector:
         fit_dt : dict, optional
             Fit params. The default is dict().
         sample_dt : dict, optional
-            Sample params. The default is dict(n=1_000).
+            Sample params. The default is dict(n=1_000, random_state=0).
 
         Returns
         -------
@@ -923,7 +927,8 @@ class ExampleSelector:
             ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
             try:
                 ccbcv.fit(X=X, y=y, split_dt=split_dt, fit_dt=fit_dt, sample_dt=sample_dt)
-            except:
+            except Exception as en:
+                print(en.__class__.__name__, en)
                 break
             if self.store_models_bl:
                 self.models_lt.append(ccbcv)
@@ -953,11 +958,16 @@ class ExampleSelector:
             # Evaluate whether to continue
             if ((iteration_it - self.best_iteration_it == self.wait_it) or 
             (drop_ix.empty) or
-            (keep_ix.empty)):
+            (keep_ix.empty) or 
+            ((self.fit_only_wait_bl) and (iteration_it == self.wait_it - 1))):
                 break
             else:
                 X.drop(index=drop_ix, inplace=True)
                 y.drop(index=drop_ix, inplace=True)
+                if 'groups' in split_dt:
+                    split_dt['groups'].drop(index=drop_ix, inplace=True)
+                if self.sklearn_splitter.random_state is not None:
+                    self.sklearn_splitter.random_state += 1
                 iteration_it += 1
         return self
 
@@ -1850,6 +1860,7 @@ class FeatureSelector:
             strategy_sr: str = 'drop_negative_means', 
             wait_it: int = 10, 
             store_models_bl: bool = False,
+            fit_only_wait_bl: bool = False,
             losses_nsmallest_n_it: int = 1):
         '''
         Selects features by iteratively removing those with highest validation losses
@@ -1870,6 +1881,8 @@ class FeatureSelector:
             Number of iterations to wait before terminating procedure. The default is 10.
         store_models_bl : bool, optional
             Flag for whether to store during procedure to save memory. The default is False.
+        fit_only_wait_bl : bool, optional
+            Flag for whether to fit only as many iterations as wait. The default is False.
         losses_nsmallest_n_it : int, optional
             Number of features to drop. The default is 1.
 
@@ -1906,6 +1919,7 @@ class FeatureSelector:
         self.strategy_sr = strategy_sr
         self.wait_it = wait_it
         self.store_models_bl = store_models_bl
+        self.fit_only_wait_bl = fit_only_wait_bl
         self.losses_nsmallest_n_it = losses_nsmallest_n_it
         
     def fit(
@@ -1958,7 +1972,11 @@ class FeatureSelector:
             
             # Fit model
             ccbcv = CustomCatBoostCV(model_type_sr=self.model_type_sr, cat_boost_dt=self.cat_boost_dt, sklearn_splitter=self.sklearn_splitter)
-            ccbcv.fit(X=X, y=y, split_dt=split_dt, fit_dt=fit_dt, sample_dt=sample_dt)
+            try:
+                ccbcv.fit(X=X, y=y, split_dt=split_dt, fit_dt=fit_dt, sample_dt=sample_dt)
+            except Exception as en:
+                print(en.__class__.__name__, en)
+                break
             if self.store_models_bl:
                 self.models_lt.append(ccbcv)
             
@@ -1987,10 +2005,13 @@ class FeatureSelector:
             # Evaluate whether to continue
             if ((iteration_it - self.best_iteration_it == self.wait_it) or 
             (drop_ix.empty) or
-            (keep_ix.difference(other=ccbcv.cat_boost_dt['ignored_features']).empty)):
+            (keep_ix.difference(other=ccbcv.cat_boost_dt['ignored_features']).empty) or 
+            ((self.fit_only_wait_bl) and (iteration_it == self.wait_it - 1))):
                 break
             else:
                 X.drop(columns=drop_ix, inplace=True)
+                if self.sklearn_splitter.random_state is not None:
+                    self.sklearn_splitter.random_state += 1
                 iteration_it += 1
         return self
 
