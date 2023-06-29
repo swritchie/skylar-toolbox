@@ -816,7 +816,8 @@ class ExampleSelector:
             objective_sr: str = 'minimize', 
             strategy_sr: str = 'drop_positive_means', 
             wait_it: int = 10, 
-            store_models_bl: bool = False):
+            store_models_bl: bool = False, 
+            fit_only_wait_bl: bool = False):
         '''
         Selects examples by iteratively removing those contributing most to validation losses
 
@@ -836,6 +837,8 @@ class ExampleSelector:
             Number of iterations to wait before terminating procedure. The default is 10.
         store_models_bl : bool, optional
             Flag for whether to store during procedure to save memory. The default is False.
+        fit_only_wait_bl : bool, optional
+            Flag for whether to fit only as many iterations as wait. The default is False.
 
         Raises
         ------
@@ -870,6 +873,7 @@ class ExampleSelector:
         self.strategy_sr = strategy_sr
         self.wait_it = wait_it
         self.store_models_bl = store_models_bl
+        self.fit_only_wait_bl = fit_only_wait_bl
         
     def fit(
             self, 
@@ -953,7 +957,8 @@ class ExampleSelector:
             # Evaluate whether to continue
             if ((iteration_it - self.best_iteration_it == self.wait_it) or 
             (drop_ix.empty) or
-            (keep_ix.empty)):
+            (keep_ix.empty) or 
+            ((self.fit_only_wait_bl) and (iteration_it == self.wait_it - 1))):
                 break
             else:
                 X.drop(index=drop_ix, inplace=True)
@@ -1850,6 +1855,7 @@ class FeatureSelector:
             strategy_sr: str = 'drop_negative_means', 
             wait_it: int = 10, 
             store_models_bl: bool = False,
+            fit_only_wait_bl: bool = False,
             losses_nsmallest_n_it: int = 1):
         '''
         Selects features by iteratively removing those with highest validation losses
@@ -1870,6 +1876,8 @@ class FeatureSelector:
             Number of iterations to wait before terminating procedure. The default is 10.
         store_models_bl : bool, optional
             Flag for whether to store during procedure to save memory. The default is False.
+        fit_only_wait_bl : bool, optional
+            Flag for whether to fit only as many iterations as wait. The default is False.
         losses_nsmallest_n_it : int, optional
             Number of features to drop. The default is 1.
 
@@ -1906,6 +1914,7 @@ class FeatureSelector:
         self.strategy_sr = strategy_sr
         self.wait_it = wait_it
         self.store_models_bl = store_models_bl
+        self.fit_only_wait_bl = fit_only_wait_bl
         self.losses_nsmallest_n_it = losses_nsmallest_n_it
         
     def fit(
@@ -1987,7 +1996,8 @@ class FeatureSelector:
             # Evaluate whether to continue
             if ((iteration_it - self.best_iteration_it == self.wait_it) or 
             (drop_ix.empty) or
-            (keep_ix.difference(other=ccbcv.cat_boost_dt['ignored_features']).empty)):
+            (keep_ix.difference(other=ccbcv.cat_boost_dt['ignored_features']).empty) or 
+            ((self.fit_only_wait_bl) and (iteration_it == self.wait_it - 1))):
                 break
             else:
                 X.drop(columns=drop_ix, inplace=True)
