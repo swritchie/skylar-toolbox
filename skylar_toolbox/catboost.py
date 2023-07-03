@@ -966,8 +966,10 @@ class ExampleSelector:
                 y.drop(index=drop_ix, inplace=True)
                 if 'groups' in split_dt:
                     split_dt['groups'].drop(index=drop_ix, inplace=True)
-                if self.sklearn_splitter.random_state is not None:
+                try:
                     self.sklearn_splitter.random_state += 1
+                except Exception as en:
+                    print(en.__class__.__name__, en)                    
                 iteration_it += 1
         return self
 
@@ -2010,8 +2012,10 @@ class FeatureSelector:
                 break
             else:
                 X.drop(columns=drop_ix, inplace=True)
-                if self.sklearn_splitter.random_state is not None:
+                try:
                     self.sklearn_splitter.random_state += 1
+                except Exception as en:
+                    print(en.__class__.__name__, en)
                 iteration_it += 1
         return self
 
