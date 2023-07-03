@@ -817,7 +817,8 @@ class ExampleSelector:
             strategy_sr: str = 'drop_positive_means', 
             wait_it: int = 10, 
             store_models_bl: bool = False, 
-            fit_only_wait_bl: bool = False):
+            fit_only_wait_bl: bool = False,
+            losses_nlargest_n_it: int = 100):
         '''
         Selects examples by iteratively removing those contributing most to validation losses
 
@@ -839,6 +840,8 @@ class ExampleSelector:
             Flag for whether to store during procedure to save memory. The default is False.
         fit_only_wait_bl : bool, optional
             Flag for whether to fit only as many iterations as wait. The default is False.
+        losses_nlargest_n_it : int, optional
+            Number of examples to drop. The default is 100.
 
         Raises
         ------
@@ -847,7 +850,7 @@ class ExampleSelector:
         ValueError
             Permitted values of objective_sr are ['minimize', 'maximize']
         NotImplementedError
-            Implemented values of strategy_sr are ['drop_positive_means', 'drop_positive_lcis']
+            Implemented values of strategy_sr are ['drop_positive_means', 'drop_positive_lcis', 'drop_nlargest_means']
 
         Returns
         -------
@@ -867,13 +870,14 @@ class ExampleSelector:
         self.objective_sr = objective_sr
         self.best_score_ft = np.inf if objective_sr == 'minimize' else -np.inf
         self.best_iteration_it = 0
-        implemented_strategies_lt = ['drop_positive_means', 'drop_positive_lcis']
+        implemented_strategies_lt = ['drop_positive_means', 'drop_positive_lcis', 'drop_nlargest_means']
         if strategy_sr not in implemented_strategies_lt:
             raise NotImplementedError(f'Implemented values of strategy_sr are {implemented_strategies_lt}')
         self.strategy_sr = strategy_sr
         self.wait_it = wait_it
         self.store_models_bl = store_models_bl
         self.fit_only_wait_bl = fit_only_wait_bl
+        self.losses_nlargest_n_it = losses_nlargest_n_it
         
     def fit(
             self, 
@@ -1159,6 +1163,11 @@ class ExampleSelector:
             drop_ix = ccbcv.example_importances_df.query(expr='mean > 0').index
         elif self.strategy_sr == 'drop_positive_lcis':
             drop_ix = ccbcv.example_importances_df.query(expr='lci > 0').index
+        elif self.strategy_sr == 'drop_nlargest_means':
+            drop_ix = (
+                ccbcv.example_importances_df
+                .loc[:, 'mean']
+                .nlargest(n=self.losses_nlargest_n_it).index)
         keep_ix = examples_ix.difference(other=drop_ix)
         return examples_ix, drop_ix, keep_ix
     
