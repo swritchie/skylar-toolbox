@@ -2370,7 +2370,7 @@ def get_parameters(
         'cat_features': [],
         'early_stopping_rounds': 10,
         'ignored_features': [],
-        'iterations': 100,
+        'iterations': 1_000,
         'monotone_constraints': {},
         'random_seed': 0,
         'task_type': 'CPU', 
