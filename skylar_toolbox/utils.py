@@ -72,14 +72,40 @@ def convert_types(
         Data frame.
 
     '''
+    # Get memory before
     print('Memory: {}'.format(convert_bytes(
         input_bytes_it=df.memory_usage().sum().sum(), 
         unit_sr=unit_sr)[1]))
+    
+    # List types to convert
+    dtypes_lt = ['float32', 'float64', 'int16', 'int32', 'int64']
+    
+    # Loop through columns converting types
     for column_sr in tqdm.tqdm(iterable=df.columns):
-        if df[column_sr].dtype == float:
-            df[column_sr] = df[column_sr].astype(dtype=np.float32)
-        elif df[column_sr].dtype == int:
-            df[column_sr] = df[column_sr].astype(dtype=np.int32)
+        # Get type
+        dtype_sr = str(df[column_sr].dtypes)
+        
+        # If it is one of listed types...
+        if dtype_sr in dtypes_lt:
+            # Get min and max
+            column_min = df[column_sr].min()
+            column_max = df[column_sr].max()
+        
+            # Apply lossless compression
+            if dtype_sr[:5] == 'float':
+                if column_min > np.finfo(dtype='float16').min and column_max < np.finfo(dtype='float16').max:
+                    df[column_sr] = df[column_sr].astype(dtype='float16')
+                elif column_min > np.finfo(dtype='float32').min and column_max < np.finfo(dtype='float32').max:
+                    df[column_sr] = df[column_sr].astype(dtype='float32')
+            else:
+                if column_min > np.iinfo(int_type='int8').min and column_max < np.iinfo(int_type='int8').max:
+                    df[column_sr] = df[column_sr].astype(dtype='int8')
+                elif column_min > np.iinfo(int_type='int16').min and column_max < np.iinfo(int_type='int16').max:
+                    df[column_sr] = df[column_sr].astype(dtype='int16')
+                elif column_min > np.iinfo(int_type='int32').min and column_max < np.iinfo(int_type='int32').max:
+                    df[column_sr] = df[column_sr].astype(dtype='int32')
+            
+    # Get memory after
     print('Memory: {}'.format(convert_bytes(
         input_bytes_it=df.memory_usage().sum().sum(),
         unit_sr=unit_sr)[1]))
