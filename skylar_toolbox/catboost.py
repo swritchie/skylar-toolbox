@@ -1357,10 +1357,7 @@ class FeatureInspector:
         # Get features
         self.features_lt = self.ccb.cbm.feature_names_
         self.cat_features_lt = self.ccb.cat_boost_dt['cat_features']
-        self.text_features_lt = self.ccb.cat_boost_dt['text_features']
-        self.other_features_lt = list(
-            set(self.features_lt)
-            .difference(set(self.cat_features_lt).union(self.text_features_lt)))
+        self.other_features_lt = list(set(self.features_lt).difference(self.cat_features_lt))
         
         # Sort columns
         X = X[self.features_lt]
@@ -1597,13 +1594,8 @@ class FeatureInspector:
                 feature importances.
 
             '''
-            data_pl = cb.Pool(
-                data=X, label=y, 
-                cat_features=self.cat_features_lt,
-                text_features=self.text_features_lt)
-            feature_importances_ay = cbm.get_feature_importance(
-                data=data_pl, 
-                type='LossFunctionChange')
+            data_pl = cb.Pool(data=X, label=y, cat_features=self.cat_features_lt)
+            feature_importances_ay = cbm.get_feature_importance(data=data_pl, type='LossFunctionChange')
             feature_importances_ss = pd.Series(data=feature_importances_ay, index=X.columns, name='importances')
             return feature_importances_ss
         feature_importances_lt = []
@@ -1611,7 +1603,7 @@ class FeatureInspector:
         for tree_index_it in tqdm.tqdm(iterable=range(self.ccb.cbm.tree_count_), desc=desc_sr):
             cbm2 = self.ccb.cbm.copy()
             cbm2.shrink(ntree_start=tree_index_it, ntree_end=tree_index_it + 1)
-            feature_importances_ss = _get_feature_importances(cbm=cbm2, X=X, y=y, cat_features_lt=self.cat_features_lt)
+            feature_importances_ss = _get_feature_importances(cbm=cbm2, X=X, y=y)
             feature_importances_lt.append(feature_importances_ss)
         feature_importances_by_tree_df = pd.concat(objs=feature_importances_lt, axis=1, ignore_index=True).T
         return feature_importances_by_tree_df
