@@ -391,8 +391,12 @@ class CustomCatBoost:
             Feature importances.
 
         '''
+        data_pl = cb.Pool(
+            data=X, label=y, 
+            cat_features=self.cat_boost_dt['cat_features'],
+            text_features=self.cat_boost_dt['text_features'])
         feature_importances_ay = self.cbm.get_feature_importance(
-            data=cb.Pool(data=X, label=y, cat_features=self.cat_boost_dt['cat_features']), 
+            data=data_pl, 
             type='LossFunctionChange')
         feature_importances_ss = pd.Series(
             data=feature_importances_ay,
@@ -473,7 +477,9 @@ class CustomCatBoost:
 
         '''
         train_ix = self.y_train.index
-        pool_dt = dict(cat_features=self.cat_boost_dt['cat_features'])
+        pool_dt = dict(
+            cat_features=self.cat_boost_dt['cat_features'],
+            text_features=self.cat_boost_dt['text_features'])
         indices_lt, scores_lt = self.cbm.get_object_importance(
             pool=cb.Pool(data=X_valid.loc[valid_ix, :], label=self.y_valid.loc[valid_ix], **pool_dt),
             train_pool=cb.Pool(data=X_train, label=self.y_train, **pool_dt), 
@@ -1351,7 +1357,10 @@ class FeatureInspector:
         # Get features
         self.features_lt = self.ccb.cbm.feature_names_
         self.cat_features_lt = self.ccb.cat_boost_dt['cat_features']
-        self.other_features_lt = list(set(self.features_lt).difference(set(self.cat_features_lt)))
+        self.text_features_lt = self.ccb.cat_boost_dt['text_features']
+        self.other_features_lt = list(
+            set(self.features_lt)
+            .difference(set(self.cat_features_lt).union(self.text_features_lt)))
         
         # Sort columns
         X = X[self.features_lt]
@@ -1569,8 +1578,7 @@ class FeatureInspector:
         def _get_feature_importances(
                 cbm: cb.CatBoost, 
                 X: pd.DataFrame, 
-                y: pd.Series, 
-                cat_features_lt: list):
+                y: pd.Series):
             '''
             Gets feature importances
 
@@ -1582,8 +1590,6 @@ class FeatureInspector:
                 Feature matrix.
             y : pd.Series
                 Target vector.
-            cat_features_lt : list
-                Categorical features.
 
             Returns
             -------
@@ -1591,8 +1597,12 @@ class FeatureInspector:
                 feature importances.
 
             '''
+            data_pl = cb.Pool(
+                data=X, label=y, 
+                cat_features=self.cat_features_lt,
+                text_features=self.text_features_lt)
             feature_importances_ay = cbm.get_feature_importance(
-                data=cb.Pool(data=X, label=y, cat_features=cat_features_lt), 
+                data=data_pl, 
                 type='LossFunctionChange')
             feature_importances_ss = pd.Series(data=feature_importances_ay, index=X.columns, name='importances')
             return feature_importances_ss
@@ -1709,11 +1719,12 @@ class FeatureInspector:
             SHAP values.
 
         '''
+        data_pl = cb.Pool(
+            data=X, label=y,
+            cat_features=self.cat_features_lt,
+            text_features=self.text_features_lt)
         shaps_df = pd.DataFrame(
-            data=self.ccb.cbm.get_feature_importance(
-                data=cb.Pool(data=X, label=y, cat_features=self.cat_features_lt), 
-                type='ShapValues', 
-                shap_calc_type='Exact'), 
+            data=self.ccb.cbm.get_feature_importance(data=data_pl, type='ShapValues', shap_calc_type='Exact'), 
             index=X.index, 
             columns=X.columns.tolist() + ['bias'])
         return shaps_df
@@ -2383,6 +2394,7 @@ def get_parameters(
         'monotone_constraints': {},
         'random_seed': 0,
         'task_type': 'CPU', 
+        'text_features': [],
         'use_best_model': True}
     implemented_model_types_lt = ['classification', 'regression']
     if model_type_sr == 'classification':
