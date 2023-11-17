@@ -1711,10 +1711,7 @@ class FeatureInspector:
             SHAP values.
 
         '''
-        data_pl = cb.Pool(
-            data=X, label=y,
-            cat_features=self.cat_features_lt,
-            text_features=self.text_features_lt)
+        data_pl = cb.Pool(data=X, label=y, cat_features=self.cat_features_lt)
         shaps_df = pd.DataFrame(
             data=self.ccb.cbm.get_feature_importance(data=data_pl, type='ShapValues', shap_calc_type='Exact'), 
             index=X.index, 
