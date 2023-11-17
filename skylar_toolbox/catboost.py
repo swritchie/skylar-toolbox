@@ -2383,6 +2383,7 @@ def get_parameters(
         'monotone_constraints': {},
         'random_seed': 0,
         'task_type': 'CPU', 
+        'text_features': [],
         'use_best_model': True}
     implemented_model_types_lt = ['classification', 'regression']
     if model_type_sr == 'classification':
