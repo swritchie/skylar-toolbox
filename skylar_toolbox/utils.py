@@ -2,7 +2,7 @@
 # Load libraries
 # =============================================================================
 
-import datetime as de
+import datetime
 import time
 
 # =============================================================================
@@ -43,6 +43,6 @@ def time_callable(callable_):
         start_ft = time.perf_counter()
         result = callable_(*pargs, **kwargs)
         end_ft = time.perf_counter()
-        print(f'{callable_.__qualname__} - {de.timedelta(seconds=end_ft - start_ft)}')
+        print(f'{callable_.__qualname__} - {datetime.timedelta(seconds=end_ft - start_ft)}')
         return result
     return wrap_callable
