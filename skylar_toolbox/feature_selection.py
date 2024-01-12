@@ -3,7 +3,6 @@
 # =============================================================================
 
 import pandas as pd
-import tqdm
 from sklearn import base as snbe
 
 # =============================================================================
@@ -50,7 +49,7 @@ class DuplicateDropper(snbe.BaseEstimator, snbe.TransformerMixin):
 
         '''
         self.duplicates_lt = []
-        for index_it, column_sr in tqdm.tqdm(iterable=enumerate(iterable=X.columns)):
+        for index_it, column_sr in enumerate(iterable=X.columns):
             for column_sr2 in X.columns[index_it+1:]:
                 if X[column_sr].iloc[:self.first_n_rows_it].equals(other=X[column_sr2].iloc[:self.first_n_rows_it]):
                     if X[column_sr].equals(other=X[column_sr2]):
