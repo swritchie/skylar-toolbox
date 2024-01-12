@@ -74,79 +74,6 @@ def get_differences(
     return differences_df
 
 # =============================================================================
-# get_group_means
-# =============================================================================
-
-def get_group_means(
-        df: pd.DataFrame, 
-        groupby_by_lt: list, 
-        column_sr: str):
-    '''
-    Groups and gets means and their CIs
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Input data frame.
-    groupby_by_lt : list
-        Columns by which to group.
-    column_sr : str
-        Column to aggregate.
-
-    Returns
-    -------
-    grouped_df : pd.DataFrame
-        Output data frame.
-
-    '''
-    grouped_df = (
-        df
-        .groupby(by=groupby_by_lt)[column_sr]
-        .agg(func=['mean', 'std', 'count'])
-        .assign(
-            std = lambda x: x['std'].fillna(value=0),
-            se2 = lambda x: 2 * x['std'] / np.sqrt(x['count']),
-            lci = lambda x: x['mean'] - x['se2'],
-            uci = lambda x: x['mean'] + x['se2']))
-    return grouped_df
-
-# =============================================================================
-# get_means
-# =============================================================================
-
-def get_means(
-        df: pd.DataFrame, 
-        columns_lt: list):
-    '''
-    Gets...
-    - mean
-    - standard deviation 
-    - 2 * standard error of mean
-    - lower confidence interval
-    - upper confidence interval
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Data.
-    columns_lt : list
-        Columns.
-
-    Returns
-    -------
-    means_df : pd.DataFrame
-        Data with columns added.
-
-    '''
-    means_df = df.assign(
-        mean = lambda x: x.loc[:, columns_lt].mean(axis=1),
-        std = lambda x: x.loc[:, columns_lt].std(axis=1).fillna(value=0),
-        se2 = lambda x: 2 * x['std'] / np.sqrt(len(columns_lt)),
-        lci = lambda x: x['mean'] - x['se2'],
-        uci = lambda x: x['mean'] + x['se2'])
-    return means_df
-
-# =============================================================================
 # plot_histogram
 # =============================================================================
 
@@ -173,36 +100,6 @@ def plot_histogram(
 
     '''
     ax = ss.hist(bins=hist_bins_it)
-    data_ss = ss.describe().round(decimals=3)
-    pd.plotting.table(ax=ax, data=data_ss, bbox=table_bbox_lt)
-    return ax
-
-# =============================================================================
-# plot_line
-# =============================================================================
-
-def plot_line(
-        ss: pd.Series, 
-        table_bbox_lt: list = [1.25, 0, 0.25, 1]):
-    '''
-    Plots line
-
-    Parameters
-    ----------
-    ss : pd.Series
-        Data to plot
-    table_bbox_lt : list, optional
-        Bounding box for table. The default is [1.25, 0, 0.25, 1].
-
-    Returns
-    -------
-    ax : plt.Axes
-        Axis
-
-    '''
-    ax = ss.sort_values(ascending=False).plot()
-    ax.set(xticks=[])
-    ax.axhline(y=0, c='k', ls=':')
     data_ss = ss.describe().round(decimals=3)
     pd.plotting.table(ax=ax, data=data_ss, bbox=table_bbox_lt)
     return ax
