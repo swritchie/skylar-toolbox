@@ -3,7 +3,6 @@
 # =============================================================================
 
 import pandas as pd
-import scikitplot as skplt
 from matplotlib import pyplot as plt
 from sklearn import calibration as sncn
 from sklearn import metrics as snmes
@@ -248,81 +247,6 @@ class ClassificationEvaluator:
         sncn.CalibrationDisplay.from_predictions(**from_predictions_dt)
         from_predictions_dt.update(y_true=self.y_test, y_prob=self.y_test_pred_proba, ax=ax)
         sncn.CalibrationDisplay.from_predictions(**from_predictions_dt)
-        return fig
-    
-    def plot_cumulative_gain(
-            self, 
-            plot_cumulative_gain_dt: dict = dict(title_fontsize='small', text_fontsize='small')):
-        '''
-        Plots cumulative gain
-
-        Parameters
-        ----------
-        plot_cumulative_gain_dt : dict, optional
-            Arguments passed to plotting function. The default is dict(title_fontsize='small', text_fontsize='small').
-
-        Returns
-        -------
-        fig : plt.Figure
-            Figure.
-
-        '''
-        fig, axes = plt.subplots(ncols=2, sharey=True, figsize=(10, 5))
-        plot_cumulative_gain_dt.update(y_true=self.y_train, y_probas=self.y_train_pred_probas, ax=axes[0])
-        skplt.metrics.plot_cumulative_gain(**plot_cumulative_gain_dt)
-        plot_cumulative_gain_dt.update(y_true=self.y_test, y_probas=self.y_test_pred_probas, ax=axes[1])
-        skplt.metrics.plot_cumulative_gain(**plot_cumulative_gain_dt)
-        set_titles(axes=axes)
-        return fig
-    
-    def plot_lift_curve(
-            self, 
-            plot_lift_curve_dt: dict = dict(title_fontsize='small', text_fontsize='small')):
-        '''
-        Plots lift curve
-
-        Parameters
-        ----------
-        plot_lift_curve_dt : dict, optional
-            Arguments passed to plotting function. The default is dict(title_fontsize='small', text_fontsize='small').
-
-        Returns
-        -------
-        fig : plt.Figure
-            Figure.
-
-        '''
-        fig, axes = plt.subplots(ncols=2, sharey=True, figsize=(10, 5))
-        plot_lift_curve_dt.update(y_true=self.y_train, y_probas=self.y_train_pred_probas, ax=axes[0])
-        skplt.metrics.plot_lift_curve(**plot_lift_curve_dt)
-        plot_lift_curve_dt.update(y_true=self.y_test, y_probas=self.y_test_pred_probas, ax=axes[1])
-        skplt.metrics.plot_lift_curve(**plot_lift_curve_dt)
-        set_titles(axes=axes)
-        return fig
-    
-    def plot_ks_statistic(
-            self, 
-            plot_ks_statistic_dt: dict = dict(title_fontsize='small', text_fontsize='small')):
-        '''
-        Plots KS statistic
-
-        Parameters
-        ----------
-        plot_ks_statistic_dt : dict, optional
-            Arguments passed to plotting function. The default is dict(title_fontsize='small', text_fontsize='small').
-
-        Returns
-        -------
-        fig : plt.Figure
-            Figure.
-
-        '''
-        fig, axes = plt.subplots(ncols=2, sharey=True, figsize=(10, 5))
-        plot_ks_statistic_dt.update(y_true=self.y_train, y_probas=self.y_train_pred_probas, ax=axes[0])
-        skplt.metrics.plot_ks_statistic(**plot_ks_statistic_dt)
-        plot_ks_statistic_dt.update(y_true=self.y_test, y_probas=self.y_test_pred_probas, ax=axes[1])
-        skplt.metrics.plot_ks_statistic(**plot_ks_statistic_dt)
-        set_titles(axes=axes)
         return fig
     
     def delete_predictions_and_targets(self):
