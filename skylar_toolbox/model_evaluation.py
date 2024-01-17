@@ -2,6 +2,7 @@
 # Load libraries
 # =============================================================================
 
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn import calibration as sncn
@@ -365,6 +366,65 @@ class ClassificationEvaluator:
             print(snmes.classification_report(y_true=y_true, y_pred=y_pred))            
         return self
     
+# =============================================================================
+# get_binary_cross_entropy
+# =============================================================================
+    
+def get_binary_cross_entropy(
+        y_true: pd.Series, 
+        y_pred_proba: pd.Series):
+    '''
+    Gets loss for every example
+
+    Parameters
+    ----------
+    y_true : pd.Series
+        Ground truth target value.
+    y_pred_proba : pd.Series
+        Estimated target value.
+
+    Returns
+    -------
+    binary_cross_entropy_ss : pd.Series
+        Loss.
+
+    '''
+    eps_ft = np.finfo(dtype=y_pred_proba.dtype).eps
+    y_pred_proba = y_pred_proba.clip(lower=eps_ft, upper=1 - eps_ft)
+    binary_cross_entropy_ss = -(
+        y_true * y_pred_proba.apply(func=np.log) + 
+        (1 - y_true) * (1 - y_pred_proba).apply(func=np.log))
+    return binary_cross_entropy_ss
+
+# =============================================================================
+# get_categorical_cross_entropy
+# =============================================================================
+
+def get_categorical_cross_entropy(
+        y_true: pd.Series, 
+        y_pred_probas: pd.DataFrame):
+    '''
+    Gets loss for every example
+
+    Parameters
+    ----------
+    y_true : pd.Series
+        Ground truth target value.
+    y_pred_probas : pd.DataFrame
+        Estimated target value.
+
+    Returns
+    -------
+    categorical_cross_entropy_ss : pd.Series
+        Loss.
+
+    '''
+    eps_ft = np.finfo(dtype=y_pred_probas.iloc[:, 0].dtype).eps
+    y_trues = pd.get_dummies(data=y_true)
+    y_pred_probas = y_pred_probas.clip(lower=eps_ft, upper=1 - eps_ft)
+    categorical_cross_entropy_ss = -(y_trues * y_pred_probas.apply(func=np.log)).sum(axis=1)
+    return categorical_cross_entropy_ss
+
 # =============================================================================
 # RegressionEvaluator
 # =============================================================================
