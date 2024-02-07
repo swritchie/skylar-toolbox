@@ -5,6 +5,7 @@
 import catboost as cb
 import numpy as np
 import pandas as pd
+import tempfile
 from catboost import monoforest as cbmf
 from catboost import utils as cbus
 from matplotlib import pyplot as plt
@@ -196,6 +197,20 @@ class CatBoostInspector:
         pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig = ax.figure
         return fig
+    
+# =============================================================================
+# get_params
+# =============================================================================
+    
+def get_params():
+    params_df = dict(
+        early_stopping_rounds=10, 
+        eval_fraction=0.2,
+        iterations=10_000, 
+        train_dir=tempfile.tempdir, 
+        use_best_model=True, 
+        verbose=100)
+    return params_df 
     
 # =============================================================================
 # MonoForestInspector
