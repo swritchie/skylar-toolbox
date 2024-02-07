@@ -1,0 +1,275 @@
+# =============================================================================
+# Load libraries
+# =============================================================================
+
+import catboost as cb
+import numpy as np
+import pandas as pd
+from catboost import monoforest as cbmf
+from catboost import utils as cbus
+from matplotlib import pyplot as plt
+
+# =============================================================================
+# CatBoostInspector
+# =============================================================================
+
+class CatBoostInspector:
+    def __init__(
+            self, 
+            cbm: cb.CatBoost, 
+            metrics_lt: list):
+        '''
+        Inspects CatBoost model
+
+        Parameters
+        ----------
+        cbm : cb.CatBoost
+            Model.
+        metrics_lt : list
+            Metrics.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.cbm = cbm
+        self.metrics_lt = metrics_lt
+
+    def fit(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series, 
+            pool_dt: dict = dict()):
+        '''
+        Calculates metrics and feature importances
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+        pool_dt : dict, optional
+            Pool params. The default is dict().
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Get pool
+        pl = cb.Pool(data=X, label=y, **pool_dt)
+
+        # Get eval metrics
+        self.eval_metrics_df = pd.DataFrame(
+            data=self.cbm.eval_metrics(data=pl, metrics=self.metrics_lt))
+
+        # Get thresholded metrics
+        self.thresholded_metrics_df = pd.concat(objs=[
+            pd.DataFrame(
+                data=np.array(object=cbus.get_roc_curve(model=self.cbm, data=pl)), 
+                index=['fpr', 'tpr', 'thresholds']).T.set_index(keys='thresholds'),
+            pd.DataFrame(
+                data=np.array(object=cbus.get_fnr_curve(model=self.cbm, data=pl)), 
+                index=['thresholds', 'fnr']).T.set_index(keys='thresholds')
+        ], axis=1)
+
+        # Get feature importances
+        features_lt = self.cbm.feature_names_
+        feature_importances_df = pd.concat(objs=[
+            pd.Series(
+                data=self.cbm.get_feature_importance(data=pl, type=type_sr), 
+                index=features_lt, 
+                name=type_sr)
+            for type_sr in ['PredictionValuesChange', 'LossFunctionChange']
+        ], axis=1)
+        feature_importances_df.sort_values(by='LossFunctionChange', inplace=True)
+        self.feature_importances_df = feature_importances_df
+
+        # Get interactions
+        features_dt = {index_it: feature_sr for index_it, feature_sr in enumerate(iterable=features_lt)}
+        interactions_df = pd.DataFrame(
+            data=self.cbm.get_feature_importance(data=pl, type='Interaction'),
+            columns=['first_feature', 'second_feature', 'interactions'])
+        self.interactions_df = interactions_df.apply(
+            func=lambda x: x.map(arg=features_dt) if x.name != 'interactions' else x)
+        return self
+
+    def plot_eval_metrics(
+            self, 
+            last_bl: bool):
+        '''
+        Plots eval metrics (either last ones or whole history)
+
+        Parameters
+        ----------
+        last_bl : bool
+            Flag for whether to return last metrics.
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        if last_bl:
+            eval_metrics_ss = self.eval_metrics_df.iloc[-1, :].sort_values().rename(index='metrics')
+            ax = eval_metrics_ss.plot(kind='barh')
+            ax.axvline(c='k', ls=':')
+            pd.plotting.table(
+                ax=ax, 
+                data=eval_metrics_ss.round(decimals=3), 
+                bbox=[1.5, 0, 0.25, 0.1 * eval_metrics_ss.shape[0]])
+        else:
+            self.eval_metrics_df.plot(
+                subplots=True, layout=(-1, 1), figsize=(10, 3 * self.eval_metrics_df.shape[1]));
+        fig = plt.gcf()
+        return fig
+
+    def plot_roc_curve(self):
+        '''
+        Plots ROC curve
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        ax = self.thresholded_metrics_df.plot(
+            x='fpr', y='tpr', ylabel='tpr', label='ROC curve', figsize=(5, 5))
+        ax.plot([0, 1], [0, 1], 'k:', label='Chance')
+        ax.legend()
+        fig = ax.figure
+        return fig
+
+    def plot_fpr_fnr(self):
+        '''
+        Plots FPR and FNR for every threshold
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        ax = self.thresholded_metrics_df.plot(y=['fpr', 'fnr'])
+        fig = ax.figure
+        return fig
+
+    def plot_feature_importances(self):
+        '''
+        Plots feature importances
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        axes = self.feature_importances_df.plot(subplots=True, layout=(-1, 1), figsize=(10, 10))
+        for ax in axes.ravel():
+            ax.axhline(c='k', ls=':')
+            ax.set(xticks=[])
+            column_sr = ax.get_legend().get_texts()[0]._text
+            data_ss = self.feature_importances_df[column_sr].describe().round(decimals=3)
+            pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        fig = plt.gcf()
+        return fig
+
+    def plot_interactions(self):
+        '''
+        Plots interactions
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        interactions_ss = self.interactions_df['interactions']
+        ax = interactions_ss.plot()
+        ax.axhline(c='k', ls=':')
+        data_ss = interactions_ss.describe().round(decimals=3)
+        pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        fig = ax.figure
+        return fig
+    
+# =============================================================================
+# MonoForestInspector
+# =============================================================================
+
+class MonoForestInspector:
+    def __init__(
+            self,
+            cbm: cb.CatBoost):
+        '''
+        Inspects monoforest
+
+        Parameters
+        ----------
+        cbm : cb.CatBoost
+            Model.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.cbm = cbm
+
+    def fit(self):
+        '''
+        Calculates polynomials and splits
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Get polynomials list
+        polynom_lt = cbmf.to_polynom(model=self.cbm)
+
+        # Get it as data frame
+        self.polynom_df = (
+            pd.DataFrame(data=list(map(lambda x: x.__dict__, polynom_lt)))
+            .assign(value = lambda x: x['value'].apply(func=lambda x: x[0])))
+
+        # Get splits
+        splits_dt = (
+            self.polynom_df['splits']
+            .apply(func=pd.Series)
+            .stack()
+            .apply(func=lambda x: x.__dict__)
+            .to_dict())
+        
+        # Get them as data frame
+        self.features_dt = {
+            index_it: feature_sr 
+            for index_it, feature_sr in enumerate(iterable=self.cbm.feature_names_)}
+        self.splits_df = (
+            pd.DataFrame(data=splits_dt)
+            .T
+            .assign(feature_idx = lambda x: x['feature_idx'].map(arg=self.features_dt)))
+        return self
+
+    def plot_weight(self):
+        '''
+        Plots weights
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        weight_ss = self.polynom_df['weight']
+        ax = weight_ss.sort_values(ascending=False).reset_index(drop=True).plot()
+        ax.axhline(c='k', ls=':')
+        data_ss = weight_ss.describe().round(decimals=3)
+        pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        fig = ax.figure
+        return fig
