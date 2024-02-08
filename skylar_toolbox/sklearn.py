@@ -149,7 +149,7 @@ class RandomForestInspector:
                 return estimator.predict_proba(X=X)[:, 1]
             return estimator.predict(X=X)
         y_preds = pd.DataFrame(
-            data=np.column_stack(tup=map(_get_prediction, self.model.estimators_)), 
+            data=np.column_stack(tup=tuple(map(_get_prediction, self.model.estimators_))), 
             index=X.index)
         return y_preds
 
