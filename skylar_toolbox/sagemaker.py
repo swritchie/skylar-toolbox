@@ -11,7 +11,8 @@ import pathlib
 
 def get_processor_path(
         in_path_sr: str, 
-        input_bl: bool):
+        input_bl: bool, 
+        file_bl: bool):
     '''
     Gets input or output path within *Processor container 
 
@@ -21,6 +22,8 @@ def get_processor_path(
         Input path.
     input_bl : bool
         Flag for whether path is input or output
+    file_bl : bool
+        Flag for whether path is to file (v. directory)
 
     Returns
     -------
@@ -39,6 +42,7 @@ def get_processor_path(
     # Join
     out_path_sr = os.path.join(
         input_directory_sr if input_bl else output_directory_sr, 
-        in_path_ph.stem, 
-        in_path_ph.name)
+        in_path_ph.stem)
+    if file_bl:
+        out_path_sr = os.path.join(out_path_sr, in_path_ph.name)
     return out_path_sr
