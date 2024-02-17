@@ -4,6 +4,7 @@
 
 import pandas as pd
 from sklearn import base as snbe
+from sklearn import feature_selection as snfs
 
 # =============================================================================
 # DuplicateDropper
@@ -75,3 +76,58 @@ class DuplicateDropper(snbe.BaseEstimator, snbe.TransformerMixin):
         '''
         X.drop(columns=self.duplicates_lt, inplace=True)
         return X
+    
+# =============================================================================
+# GenericUnivariateSelector
+# =============================================================================
+
+class GenericUnivariateSelector(snfs.GenericUnivariateSelect):
+    def transform(self, X):
+        return pd.DataFrame(
+            data=X.loc[:, self.get_support()],
+            index=X.index, 
+            columns=self.get_feature_names_out())
+    
+# =============================================================================
+# ModelBasedSelector
+# =============================================================================
+
+class ModelBasedSelector(snfs.SelectFromModel):
+    def transform(self, X):
+        return pd.DataFrame(
+            data=X.loc[:, self.get_support()], 
+            index=X.index, 
+            columns=self.get_feature_names_out())
+    
+# =============================================================================
+# RFE
+# =============================================================================
+    
+class RFE(snfs.RFE):
+    def transform(self, X):
+        return pd.DataFrame(
+            data=X.loc[:, self.get_support()], 
+            index=X.index, 
+            columns=self.get_feature_names_out())
+    
+# =============================================================================
+# RFECV
+# =============================================================================
+
+class RFECV(snfs.RFECV):
+    def transform(self, X):
+        return pd.DataFrame(
+            data=X.loc[:, self.get_support()], 
+            index=X.index, 
+            columns=self.get_feature_names_out())
+
+# =============================================================================
+# SequentialFeatureSelector
+# =============================================================================
+
+class SequentialFeatureSelector(snfs.SequentialFeatureSelector):
+    def transform(self, X):
+        return pd.DataFrame(
+            data=X.loc[:, self.get_support()], 
+            index=X.index, 
+            columns=self.get_feature_names_out())
