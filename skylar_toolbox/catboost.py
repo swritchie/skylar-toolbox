@@ -247,17 +247,15 @@ class CatBoostInspector:
         return fig
     
 # =============================================================================
-# get_params
+# default_params_dt
 # =============================================================================
     
-def get_params():
-    params_df = dict(
-        early_stopping_rounds=10, 
-        eval_fraction=0.2,
-        train_dir=tempfile.tempdir, 
-        use_best_model=True, 
-        verbose=100)
-    return params_df 
+default_params_dt = dict(
+    early_stopping_rounds=10, 
+    eval_fraction=0.2,
+    train_dir=tempfile.tempdir, 
+    use_best_model=True, 
+    verbose=100) 
     
 # =============================================================================
 # MonoForestInspector
