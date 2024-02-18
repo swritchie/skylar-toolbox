@@ -254,7 +254,6 @@ def get_params():
     params_df = dict(
         early_stopping_rounds=10, 
         eval_fraction=0.2,
-        iterations=10_000, 
         train_dir=tempfile.tempdir, 
         use_best_model=True, 
         verbose=100)
