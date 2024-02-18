@@ -157,6 +157,93 @@ class AggregationEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
         return ax
 
 # =============================================================================
+# CategoricalConcatenator
+# =============================================================================
+
+class CategoricalConcatenator(snbe.BaseEstimator, snbe.TransformerMixin):
+    def __init__(
+            self, 
+            tuples_lt: list):
+        '''
+        Concatenates tuples of categorical features (assuming all have str dtype)
+
+        Parameters
+        ----------
+        tuples_lt : list
+            Tuples of features.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.tuples_lt = tuples_lt
+
+    def fit(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series = None):
+        '''
+        Fits
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series, optional
+            Target vector. The default is None.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        return self
+
+    def transform(
+            self, 
+            X: pd.DataFrame):
+        '''
+        Transforms
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        def _concatenate(
+                X: pd.DataFrame, 
+                tuple_te: tuple):
+            '''
+            Concatenates first feature to rest
+
+            Parameters
+            ----------
+            X : pd.DataFrame
+                Feature matrix.
+            tuple_te : tuple
+                Tuple of features.
+
+            Returns
+            -------
+            TYPE
+                DESCRIPTION.
+
+            '''
+            return X.loc[:, tuple_te[0]].str.cat(others=X.loc[:, tuple_te[1:]], sep='-')
+        features_dt = {
+            '-cat-'.join(tuple_te): _concatenate(X=X, tuple_te=tuple_te)
+            for tuple_te in self.tuples_lt}
+        return X.assign(**features_dt)
+
+# =============================================================================
 # DatetimeFeaturesTuner
 # =============================================================================
 
