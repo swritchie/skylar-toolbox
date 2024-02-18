@@ -9,6 +9,7 @@ import tempfile
 from catboost import monoforest as cbmf
 from catboost import utils as cbus
 from matplotlib import pyplot as plt
+from sklearn import base as snbe
 
 # =============================================================================
 # AbsoluteDifferenceCallback
@@ -57,6 +58,125 @@ class AbsoluteDifferenceCallback:
         difference_ft = abs(validation_metric_ft - learn_metric_ft)
         continue_bl = difference_ft < self.threshold_ft
         return continue_bl
+
+# =============================================================================
+# CatBoostClassifier
+# =============================================================================
+
+class CatBoostClassifier(cb.CatBoostClassifier):
+    def fit(self, X, y, **kwargs):
+        # Get params
+        params_dt = self.get_params()
+
+        # Update params
+        params_dt = update_params(params_dt=params_dt, X=X)
+        
+        # Set params
+        self.set_params(**params_dt)
+
+        # Fit
+        return super().fit(X=X, y=y, **kwargs)
+    
+# =============================================================================
+# CatBoostClassifierWithSelection
+# =============================================================================
+
+class CatBoostClassifierWithSelection(snbe.BaseEstimator, snbe.ClassifierMixin):
+    def __init__(
+            self, 
+            init_params_dt: dict):
+        '''
+        Wraps CatBoost's select_features() method to make it pipeline-compatible
+
+        Parameters
+        ----------
+        init_params_dt : dict
+            Initialization params.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.init_params_dt = init_params_dt # Required for scikit-learn rendering
+        self.cbc = cb.CatBoostClassifier(**init_params_dt)
+
+    def fit(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series, 
+            fit_params_dt: dict = dict()):
+        '''
+        Fits
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+        fit_params_dt : dict, optional
+            Additional params passed to select_features(). The default is dict().
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Get params
+        params_dt = self.cbc.get_params()
+
+        # Update params
+        params_dt = update_params(params_dt=params_dt, X=X)
+        
+        # Set params
+        self.cbc.set_params(**params_dt)
+
+        # Select
+        self.select_features_dt = self.cbc.select_features(
+            X=X, y=y, 
+            features_for_select=range(X.shape[1]),
+            **fit_params_dt)
+        return self
+
+    def predict(
+            self, 
+            X: pd.DataFrame):
+        '''
+        Predicts classes
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        return self.cbc.predict(data=X)
+        
+    def predict_proba(
+            self, 
+            X):
+        '''
+        Predicts probabilities
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        return self.cbc.predict_proba(X=X)
 
 # =============================================================================
 # CatBoostInspector
@@ -247,18 +367,115 @@ class CatBoostInspector:
         return fig
     
 # =============================================================================
-# get_params
+# CatBoostRegressor
+# =============================================================================
+
+class CatBoostRegressor(cb.CatBoostRegressor):
+    def fit(self, X, y, **kwargs):
+        # Get params
+        params_dt = self.get_params()
+
+        # Update params
+        params_dt = update_params(params_dt=params_dt, X=X)
+        
+        # Set params
+        self.set_params(**params_dt)
+
+        # Fit
+        return super().fit(X=X, y=y, **kwargs)
+    
+# =============================================================================
+# CatBoostRegressorWithSelection
+# =============================================================================
+
+class CatBoostRegressorWithSelection(snbe.BaseEstimator, snbe.RegressorMixin):
+    def __init__(
+            self, 
+            init_params_dt: dict):
+        '''
+        Wraps CatBoost's select_features() method to make it pipeline-compatible
+
+        Parameters
+        ----------
+        init_params_dt : dict
+            Initialization params.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.init_params_dt = init_params_dt # Required for scikit-learn rendering
+        self.cbr = cb.CatBoostRegressor(**init_params_dt)
+
+    def fit(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series, 
+            fit_params_dt: dict = dict()):
+        '''
+        Fits
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+        fit_params_dt : dict, optional
+            Additional params passed to select_features(). The default is dict().
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Get params
+        params_dt = self.cbr.get_params()
+
+        # Update params
+        params_dt = update_params(params_dt=params_dt, X=X)
+        
+        # Set params
+        self.cbr.set_params(**params_dt)
+
+        # Select
+        self.select_features_dt = self.cbr.select_features(
+            X=X, y=y, 
+            features_for_select=range(X.shape[1]),
+            **fit_params_dt)
+        return self
+
+    def predict(
+            self, 
+            X: pd.DataFrame):
+        '''
+        Predicts classes
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        return self.cbr.predict(data=X)
+    
+# =============================================================================
+# default_params_dt
 # =============================================================================
     
-def get_params():
-    params_df = dict(
-        early_stopping_rounds=10, 
-        eval_fraction=0.2,
-        iterations=10_000, 
-        train_dir=tempfile.tempdir, 
-        use_best_model=True, 
-        verbose=100)
-    return params_df 
+default_params_dt = dict(
+    early_stopping_rounds=10, 
+    eval_fraction=0.2,
+    train_dir=tempfile.tempdir, 
+    use_best_model=True, 
+    verbose=100) 
     
 # =============================================================================
 # MonoForestInspector
@@ -336,3 +553,49 @@ class MonoForestInspector:
         pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig = ax.figure
         return fig
+    
+# =============================================================================
+# update_params
+# =============================================================================
+
+def update_params(
+        params_dt: dict, 
+        X: pd.DataFrame):
+    '''
+    Updates params (e.g., as part of pipeline)
+
+    Parameters
+    ----------
+    params_dt : dict
+        Params at initialization.
+    X : pd.DataFrame
+        Current feature matrix.
+
+    Returns
+    -------
+    params_dt : dict
+        Params.
+
+    '''
+    # Get cat features
+    old_cat_features_lt = params_dt.get('cat_features', [])
+    new_cat_features_lt = (
+        X.columns
+        .intersection(other=old_cat_features_lt)              # May have been dropped
+        .union(other=X.select_dtypes(include=object).columns) # May have been added
+        .tolist())
+
+    # Get monotone contraints
+    old_monotone_constraints_dt = params_dt.get('monotone_constraints', dict())
+    if old_monotone_constraints_dt:
+        new_monotone_constraints_dt = {
+            key_sr: value_it for key_sr, value_it in old_monotone_constraints_dt.items()
+            if key_sr in X.columns}
+    else:
+        new_monotone_constraints_dt = old_monotone_constraints_dt
+
+    # Update
+    params_dt.update(
+        cat_features=new_cat_features_lt, 
+        monotone_constraints=new_monotone_constraints_dt)
+    return params_dt
