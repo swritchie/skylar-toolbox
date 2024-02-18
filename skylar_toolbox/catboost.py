@@ -59,6 +59,24 @@ class AbsoluteDifferenceCallback:
         return continue_bl
 
 # =============================================================================
+# CatBoostClassifier
+# =============================================================================
+
+class CatBoostClassifier(cb.CatBoostClassifier):
+    def fit(self, X, y, **kwargs):
+        # Get params
+        params_dt = self.get_params()
+
+        # Update params
+        params_dt = update_params(params_dt=params_dt, X=X)
+        
+        # Set params
+        self.set_params(**params_dt)
+
+        # Fit
+        return super().fit(X=X, y=y, **kwargs)
+
+# =============================================================================
 # CatBoostInspector
 # =============================================================================
 
@@ -245,6 +263,24 @@ class CatBoostInspector:
         pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig = ax.figure
         return fig
+    
+# =============================================================================
+# CatBoostRegressor
+# =============================================================================
+
+class CatBoostRegressor(cb.CatBoostRegressor):
+    def fit(self, X, y, **kwargs):
+        # Get params
+        params_dt = self.get_params()
+
+        # Update params
+        params_dt = update_params(params_dt=params_dt, X=X)
+        
+        # Set params
+        self.set_params(**params_dt)
+
+        # Fit
+        return super().fit(X=X, y=y, **kwargs)
     
 # =============================================================================
 # default_params_dt
