@@ -335,3 +335,49 @@ class MonoForestInspector:
         pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig = ax.figure
         return fig
+    
+# =============================================================================
+# update_params
+# =============================================================================
+
+def update_params(
+        params_dt: dict, 
+        X: pd.DataFrame):
+    '''
+    Updates params (e.g., as part of pipeline)
+
+    Parameters
+    ----------
+    params_dt : dict
+        Params at initialization.
+    X : pd.DataFrame
+        Current feature matrix.
+
+    Returns
+    -------
+    params_dt : dict
+        Params.
+
+    '''
+    # Get cat features
+    old_cat_features_lt = params_dt.get('cat_features', [])
+    new_cat_features_lt = (
+        X.columns
+        .intersection(other=old_cat_features_lt)              # May have been dropped
+        .union(other=X.select_dtypes(include=object).columns) # May have been added
+        .tolist())
+
+    # Get monotone contraints
+    old_monotone_constraints_dt = params_dt.get('monotone_constraints', dict())
+    if old_monotone_constraints_dt:
+        new_monotone_constraints_dt = {
+            key_sr: value_it for key_sr, value_it in old_monotone_constraints_dt.items()
+            if key_sr in X.columns}
+    else:
+        new_monotone_constraints_dt = old_monotone_constraints_dt
+
+    # Update
+    params_dt.update(
+        cat_features=new_cat_features_lt, 
+        monotone_constraints=new_monotone_constraints_dt)
+    return params_dt
