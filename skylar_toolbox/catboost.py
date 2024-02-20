@@ -255,7 +255,7 @@ class CatBoostInspector:
                 name=type_sr)
             for type_sr in ['PredictionValuesChange', 'LossFunctionChange']
         ], axis=1)
-        feature_importances_df.sort_values(by='LossFunctionChange', inplace=True)
+        feature_importances_df.sort_values(by='LossFunctionChange', ascending=False, inplace=True)
         self.feature_importances_df = feature_importances_df
 
         # Get interactions
