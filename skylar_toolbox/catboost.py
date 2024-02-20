@@ -229,6 +229,7 @@ class CatBoostInspector:
 
         '''
         # Get pool
+        pool_dt['cat_features'] = self.cbm.get_params().get('cat_features', [])
         pl = cb.Pool(data=X, label=y, **pool_dt)
 
         # Get eval metrics
@@ -347,6 +348,35 @@ class CatBoostInspector:
             pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig = plt.gcf()
         return fig
+    
+    def plot_top_feature_importances(
+            self, 
+            nlargest_n_it: int = 10, 
+            nlargest_columns_lt: list = ['LossFunctionChange']):
+        '''
+        Plots top feature importances
+
+        Parameters
+        ----------
+        nlargest_n_it : int, optional
+            Number of top importances. The default is 10.
+        nlargest_columns_lt : list, optional
+            Column on which to sort. The default is ['LossFunctionChange'].
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        (
+            self.feature_importances_df
+            .nlargest(n=nlargest_n_it, columns=nlargest_columns_lt)
+            [::-1]
+            .plot(kind='barh', subplots=True, layout=(1, -1), sharex=False, sharey=True, legend=False)
+        )
+        fig = plt.gcf()
+        return fig
 
     def plot_interactions(self):
         '''
@@ -363,6 +393,33 @@ class CatBoostInspector:
         ax.axhline(c='k', ls=':')
         data_ss = interactions_ss.describe().round(decimals=3)
         pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
+        fig = ax.figure
+        return fig
+    
+    def plot_top_interactions(
+            self, 
+            nlargest_n_it: int = 10):
+        '''
+        Plots top interactions
+
+        Parameters
+        ----------
+        nlargest_n_it : int, optional
+            Number of top interactions. The default is 10.
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        ax = (
+            self.interactions_df
+            .set_index(keys=['first_feature', 'second_feature'])
+            .squeeze()
+            .nlargest(n=nlargest_n_it)
+            [::-1]
+            .plot(kind='barh'))
         fig = ax.figure
         return fig
     
