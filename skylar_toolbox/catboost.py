@@ -396,6 +396,33 @@ class CatBoostInspector:
         fig = ax.figure
         return fig
     
+    def plot_top_interactions(
+            self, 
+            nlargest_n_it: int = 10):
+        '''
+        Plots top interactions
+
+        Parameters
+        ----------
+        nlargest_n_it : int, optional
+            Number of top interactions. The default is 10.
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        ax = (
+            self.interactions_df
+            .set_index(keys=['first_feature', 'second_feature'])
+            .squeeze()
+            .nlargest(n=nlargest_n_it)
+            [::-1]
+            .plot(kind='barh'))
+        fig = ax.figure
+        return fig
+    
 # =============================================================================
 # CatBoostRegressor
 # =============================================================================
