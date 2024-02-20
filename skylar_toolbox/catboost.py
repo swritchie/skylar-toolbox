@@ -229,6 +229,7 @@ class CatBoostInspector:
 
         '''
         # Get pool
+        pool_dt['cat_features'] = self.cbm.get_params().get('cat_features', [])
         pl = cb.Pool(data=X, label=y, **pool_dt)
 
         # Get eval metrics
