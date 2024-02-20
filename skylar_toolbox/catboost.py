@@ -348,6 +348,35 @@ class CatBoostInspector:
             pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 0.25, 1])
         fig = plt.gcf()
         return fig
+    
+    def plot_top_feature_importances(
+            self, 
+            nlargest_n_it: int = 10, 
+            nlargest_columns_lt: list = ['LossFunctionChange']):
+        '''
+        Plots top feature importances
+
+        Parameters
+        ----------
+        nlargest_n_it : int, optional
+            Number of top importances. The default is 10.
+        nlargest_columns_lt : list, optional
+            Column on which to sort. The default is ['LossFunctionChange'].
+
+        Returns
+        -------
+        fig : plt.Figure
+            Figure.
+
+        '''
+        (
+            self.feature_importances_df
+            .nlargest(n=nlargest_n_it, columns=nlargest_columns_lt)
+            [::-1]
+            .plot(kind='barh', subplots=True, layout=(1, -1), sharex=False, sharey=True, legend=False)
+        )
+        fig = plt.gcf()
+        return fig
 
     def plot_interactions(self):
         '''
