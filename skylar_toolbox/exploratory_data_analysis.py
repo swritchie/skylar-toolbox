@@ -29,7 +29,6 @@ def describe(df: pd.DataFrame):
         .describe()
         .T
         .assign(
-            oom = lambda x: np.log10(x['50%']).round(), 
             iqr = lambda x: x['75%'] - x['25%'],
             low_outlier_flag = lambda x: x['min'] < x['25%'] - 1.5 * x['iqr'],
             high_outlier_flag = lambda x: x['max'] > x['75%'] + 1.5 * x['iqr']))
