@@ -158,6 +158,11 @@ class CatBoostClassifierWithSelection(snbe.BaseEstimator, snbe.ClassifierMixin):
 
         # Train final model
         self.cbc.fit(X=X.drop(columns=self.eliminated_features_ss.index), y=y)
+        
+        # Assign attributes of child to parent (for pipeline compatibility)
+        for attribute_sr in dir(self.cbc):
+            if attribute_sr.endswith('_') and not attribute_sr.startswith('_'):
+                self.__setattr__(attribute_sr, self.cbc.__getattribute__(attribute_sr))
         return self
 
     def predict(
@@ -542,6 +547,11 @@ class CatBoostRegressorWithSelection(snbe.BaseEstimator, snbe.RegressorMixin):
 
         # Train final model
         self.cbr.fit(X=X.drop(columns=self.eliminated_features_ss.index), y=y)
+        
+        # Assign attributes of child to parent (for pipeline compatibility)
+        for attribute_sr in dir(self.cbr):
+            if attribute_sr.endswith('_') and not attribute_sr.startswith('_'):
+                self.__setattr__(attribute_sr, self.cbr.__getattribute__(attribute_sr))
         return self
 
     def predict(
