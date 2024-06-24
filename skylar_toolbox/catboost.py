@@ -78,6 +78,127 @@ class CatBoostClassifier(cb.CatBoostClassifier):
         return super().fit(X=X, y=y, **kwargs)
     
 # =============================================================================
+# CatBoostClassifierWithSelection
+# =============================================================================
+    
+class CatBoostClassifierWithSelection(snbe.BaseEstimator, snbe.ClassifierMixin):
+    def __init__(
+            self, 
+            init_params_dt: dict):
+        '''
+        Wraps CatBoost's select_features() method to make it pipeline-compatible
+
+        Parameters
+        ----------
+        init_params_dt : dict
+            Initialization params.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.init_params_dt = init_params_dt # Required for scikit-learn rendering
+        self.cbc = cb.CatBoostClassifier(**init_params_dt)
+
+    def fit(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series, 
+            fit_params_dt: dict = dict()):
+        '''
+        Fits
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+        fit_params_dt : dict, optional
+            Additional params passed to select_features(). The default is dict().
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Get params
+        params_dt = self.cbc.get_params()
+
+        # Update params
+        params_dt = update_params(params_dt=params_dt, X=X)
+        
+        # Set params
+        self.cbc.set_params(**params_dt)
+
+        # Select
+        if 'train_final_model' in fit_params_dt:
+            del fit_params_dt['train_final_model']
+        select_features_dt = self.cbc.select_features(
+            X=X, y=y, 
+            features_for_select=range(X.shape[1]),
+            train_final_model=False,
+            **fit_params_dt)
+
+        # Get eliminated features
+        self.eliminated_features_ss = pd.Series(
+            data=select_features_dt['loss_graph']['loss_values'][1:], 
+            index=select_features_dt['eliminated_features_names'], 
+            name='losses')
+
+        # Update params
+        params_dt = update_params(
+            params_dt=params_dt, 
+            X=X.drop(columns=self.eliminated_features_ss.index))
+        
+        # Set params
+        self.cbc.set_params(**params_dt)
+
+        # Train final model
+        self.cbc.fit(X=X.drop(columns=self.eliminated_features_ss.index), y=y)
+        return self
+
+    def predict(
+            self, 
+            X: pd.DataFrame):
+        '''
+        Predicts classes
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        return self.cbc.predict(data=X.loc[:, self.cbc.feature_names_])
+        
+    def predict_proba(
+            self, 
+            X):
+        '''
+        Predicts probabilities
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        return self.cbc.predict_proba(X=X.loc[:, self.cbc.feature_names_])
+
+# =============================================================================
 # CatBoostInspector
 # =============================================================================
 
@@ -339,6 +460,108 @@ class CatBoostRegressor(cb.CatBoostRegressor):
 
         # Fit
         return super().fit(X=X, y=y, **kwargs)
+    
+# =============================================================================
+# CatBoostRegressorWithSelection
+# =============================================================================
+
+class CatBoostRegressorWithSelection(snbe.BaseEstimator, snbe.RegressorMixin):
+    def __init__(
+            self, 
+            init_params_dt: dict):
+        '''
+        Wraps CatBoost's select_features() method to make it pipeline-compatible
+
+        Parameters
+        ----------
+        init_params_dt : dict
+            Initialization params.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.init_params_dt = init_params_dt # Required for scikit-learn rendering
+        self.cbr = cb.CatBoostRegressor(**init_params_dt)
+
+    def fit(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series, 
+            fit_params_dt: dict = dict()):
+        '''
+        Fits
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series
+            Target vector.
+        fit_params_dt : dict, optional
+            Additional params passed to select_features(). The default is dict().
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        # Get params
+        params_dt = self.cbr.get_params()
+
+        # Update params
+        params_dt = update_params(params_dt=params_dt, X=X)
+        
+        # Set params
+        self.cbr.set_params(**params_dt)
+
+        # Select
+        if 'train_final_model' in fit_params_dt:
+            del fit_params_dt['train_final_model']
+        select_features_dt = self.cbr.select_features(
+            X=X, y=y, 
+            features_for_select=range(X.shape[1]),
+            train_final_model=False,
+            **fit_params_dt)
+        
+        # Get eliminated features
+        self.eliminated_features_ss = pd.Series(
+            data=select_features_dt['loss_graph']['loss_values'][1:], 
+            index=select_features_dt['eliminated_features_names'], 
+            name='losses')
+
+        # Update params
+        params_dt = update_params(
+            params_dt=params_dt, 
+            X=X.drop(columns=self.eliminated_features_ss.index))
+        
+        # Set params
+        self.cbr.set_params(**params_dt)
+
+        # Train final model
+        self.cbr.fit(X=X.drop(columns=self.eliminated_features_ss.index), y=y)
+        return self
+
+    def predict(
+            self, 
+            X: pd.DataFrame):
+        '''
+        Predicts classes
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        return self.cbr.predict(data=X.loc[:, self.cbr.feature_names_])
     
 # =============================================================================
 # default_params_dt
