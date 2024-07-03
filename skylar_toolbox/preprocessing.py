@@ -12,6 +12,7 @@ from sklearn import feature_selection as snfs
 from sklearn import linear_model as snlm
 from sklearn import model_selection as snmos
 from sklearn import pipeline as snpe
+from sklearn import preprocessing as snpg
 from skylar_toolbox import model_selection as stms
 
 # =============================================================================
@@ -623,57 +624,19 @@ class RareLabelEncoderTuner:
 # TypeCaster
 # =============================================================================
     
-class TypeCaster(snbe.BaseEstimator, snbe.TransformerMixin):
+class TypeCaster(snpg.FunctionTransformer):
     def __init__(
             self, 
-            features_lt: list, 
-            type_sr: str):
-        '''
-        Casts features to given type
-
-        Parameters
-        ----------
-        features_lt : list
-            Features.
-        type_sr : str
-            Type.
-
-        Returns
-        -------
-        None.
-
-        '''
-        self.features_lt = features_lt
+            type_sr, 
+            **kwargs):
+        super().__init__(**kwargs)
         self.type_sr = type_sr
-
-    def fit(
-            self, 
-            X: pd.DataFrame, 
-            y: pd.Series = None):
-        '''
-        Keeps only features passed that are in data
-
-        Parameters
-        ----------
-        X : pd.DataFrame
-            Feature matrix.
-        y : pd.Series, optional
-            Target vector. The default is None.
-
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
-        '''
-        self.features_lt = X.columns.intersection(other=self.features_lt)
-        return self
-
+    
     def transform(
             self, 
             X: pd.DataFrame):
         '''
-        Casts features to type
+        Casts to specified type
 
         Parameters
         ----------
@@ -682,11 +645,11 @@ class TypeCaster(snbe.BaseEstimator, snbe.TransformerMixin):
 
         Returns
         -------
-        TYPE
-            DESCRIPTION.
+        pd.DataFrame
+            Feature matrix.
 
         '''
-        return X.astype(dtype={feature_sr: self.type_sr for feature_sr in self.features_lt})
+        return X.astype(dtype=self.type_sr)
 
 # =============================================================================
 # WinsorizerTuner
