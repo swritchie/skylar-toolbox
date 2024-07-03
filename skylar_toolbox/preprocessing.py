@@ -12,7 +12,6 @@ from sklearn import feature_selection as snfs
 from sklearn import linear_model as snlm
 from sklearn import model_selection as snmos
 from sklearn import pipeline as snpe
-from sklearn import preprocessing as snpg
 from skylar_toolbox import model_selection as stms
 
 # =============================================================================
@@ -156,6 +155,31 @@ class AggregationEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
         '''
         ax = self.mutual_info_ss.plot(kind='barh')
         return ax
+
+# =============================================================================
+# cast
+# =============================================================================
+
+def cast(
+        df: pd.DataFrame, 
+        dtype_sr: str):
+    '''
+    Casts to specified type
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Feature matrix.
+    dtype_sr : str
+        Data type.
+
+    Returns
+    -------
+    pd.DataFrame
+        Feature matrix.
+
+    '''
+    return df.astype(dtype=dtype_sr)
 
 # =============================================================================
 # CategoricalConcatenator
@@ -620,37 +644,6 @@ class RareLabelEncoderTuner:
         fig = self.cgscv.plot_scores_v_param(column_sr=self.cgscv.columns_lt[0])
         return fig
     
-# =============================================================================
-# TypeCaster
-# =============================================================================
-    
-class TypeCaster(snpg.FunctionTransformer):
-    def __init__(
-            self, 
-            type_sr, 
-            **kwargs):
-        super().__init__(**kwargs)
-        self.type_sr = type_sr
-    
-    def transform(
-            self, 
-            X: pd.DataFrame):
-        '''
-        Casts to specified type
-
-        Parameters
-        ----------
-        X : pd.DataFrame
-            Feature matrix.
-
-        Returns
-        -------
-        pd.DataFrame
-            Feature matrix.
-
-        '''
-        return X.astype(dtype=self.type_sr)
-
 # =============================================================================
 # WinsorizerTuner
 # =============================================================================
