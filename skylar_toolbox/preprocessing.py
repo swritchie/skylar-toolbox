@@ -620,6 +620,75 @@ class RareLabelEncoderTuner:
         return fig
     
 # =============================================================================
+# TypeCaster
+# =============================================================================
+    
+class TypeCaster(snbe.BaseEstimator, snbe.TransformerMixin):
+    def __init__(
+            self, 
+            features_lt: list, 
+            type_sr: str):
+        '''
+        Casts features to given type
+
+        Parameters
+        ----------
+        features_lt : list
+            Features.
+        type_sr : str
+            Type.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.features_lt = features_lt
+        self.type_sr = type_sr
+
+    def fit(
+            self, 
+            X: pd.DataFrame, 
+            y: pd.Series = None):
+        '''
+        Keeps only features passed that are in data
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+        y : pd.Series, optional
+            Target vector. The default is None.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        self.features_lt = X.columns.intersection(other=self.features_lt)
+        return self
+
+    def transform(
+            self, 
+            X: pd.DataFrame):
+        '''
+        Casts features to type
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Feature matrix.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        return X.astype(dtype={feature_sr: self.type_sr for feature_sr in self.features_lt})
+
+# =============================================================================
 # WinsorizerTuner
 # =============================================================================
 
@@ -633,6 +702,7 @@ class WinsorizerTuner:
         quantiles_lt: list = [1e-5, 0.01, 0.05, 0.1]):
         '''
         Tunes `fold` for feos.Winsorizer()
+        
         Parameters
         ----------
         model_type_sr : str
@@ -645,10 +715,12 @@ class WinsorizerTuner:
             Model. The default is None.
         quantiles_lt : list, optional
             Quantiles. The default is [1e-5, 0.01, 0.05, 0.1].
+        
         Raises
         ------
         NotImplementedError
             Implemented values of model_type_sr are  ['classification', 'regression'].
+        
         Returns
         -------
         None.
@@ -672,12 +744,14 @@ class WinsorizerTuner:
         y: pd.Series):
         '''
         Tunes and stores metadata
+        
         Parameters
         ----------
         X : pd.DataFrame
             Feature matrix.
         y : pd.Series
             Target vector.
+        
         Returns
         -------
         TYPE
@@ -705,6 +779,7 @@ class WinsorizerTuner:
     def plot_scores_v_param(self):
         '''
         Plots train and test scores against parameter values
+        
         Returns
         -------
         fig : plt.Figure
