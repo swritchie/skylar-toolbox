@@ -103,7 +103,7 @@ class CatBoostClassifierWithSelection(cb.CatBoostClassifier):
         self.set_params(**params_dt)
 
         # Select
-        select_features_dt = self.select_features(
+        select_features_dt = super().select_features(
             X=X, y=y, 
             algorithm=self.algorithm_sr,
             features_for_select=range(X.shape[1]),
@@ -419,7 +419,7 @@ class CatBoostRegressorWithSelection(cb.CatBoostRegressor):
         self.set_params(**params_dt)
 
         # Select
-        select_features_dt = self.select_features(
+        select_features_dt = super().select_features(
             X=X, y=y, 
             algorithm=self.algorithm_sr,
             features_for_select=range(X.shape[1]),
