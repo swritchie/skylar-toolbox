@@ -9,6 +9,7 @@ import tempfile
 from catboost import monoforest as cbmf
 from catboost import utils as cbus
 from matplotlib import pyplot as plt
+from sklearn import base as snbe
 
 # =============================================================================
 # AbsoluteDifferenceCallback
@@ -75,59 +76,6 @@ class CatBoostClassifier(cb.CatBoostClassifier):
 
         # Fit
         return super().fit(X=X, y=y, **kwargs)
-    
-# =============================================================================
-# CatBoostClassifierWithSelection
-# =============================================================================
-    
-class CatBoostClassifierWithSelection(cb.CatBoostClassifier):
-    def __init__(
-        self, 
-        algorithm_sr: str = 'RecursiveByLossFunctionChange',
-        num_features_to_select_it: int = 2,
-        steps_it: int = 1,
-        **kwargs):
-        super().__init__(**kwargs)
-        self.algorithm_sr = algorithm_sr
-        self.num_features_to_select_it = num_features_to_select_it
-        self.steps_it = steps_it
-    
-    def fit(self, X, y, **kwargs):
-        # Get params
-        params_dt = self.get_params()
-
-        # Update params
-        params_dt = update_params(params_dt=params_dt, X=X)
-        
-        # Set params
-        self.set_params(**params_dt)
-
-        # Select
-        select_features_dt = super().select_features(
-            X=X, y=y, 
-            algorithm=self.algorithm_sr,
-            features_for_select=range(X.shape[1]),
-            num_features_to_select=self.num_features_to_select_it,
-            steps=self.steps_it, 
-            train_final_model=False)
-
-        # Get eliminated features
-        self.eliminated_features_ss = pd.Series(
-            data=select_features_dt['loss_graph']['loss_values'][1:], 
-            index=select_features_dt['eliminated_features_names'], 
-            name='losses')
-
-        # Update params
-        params_dt = update_params(
-            params_dt=params_dt, 
-            X=X.drop(columns=self.eliminated_features_ss.index))
-        
-        # Set params
-        self.set_params(**params_dt)
-
-        # Train final model
-        super().fit(X=X.drop(columns=self.eliminated_features_ss.index), y=y, **kwargs)
-        return self
 
 # =============================================================================
 # CatBoostInspector
@@ -393,57 +341,92 @@ class CatBoostRegressor(cb.CatBoostRegressor):
         return super().fit(X=X, y=y, **kwargs)
     
 # =============================================================================
-# CatBoostRegressorWithSelection
+# CatBoostSelector
 # =============================================================================
-
-class CatBoostRegressorWithSelection(cb.CatBoostRegressor):
+    
+class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
     def __init__(
         self, 
-        algorithm_sr: str = 'RecursiveByLossFunctionChange',
-        num_features_to_select_it: int = 2,
-        steps_it: int = 1,
-        **kwargs):
-        super().__init__(**kwargs)
+        model_type_sr: str,
+        depth_it: int = None,
+        iterations_it: int = None,
+        l2_leaf_reg_ft: float = None,
+        learning_rate_ft: float = None,
+        random_strength_ft: float = None, 
+        rsm_ft: float = None,
+        init_params_dt: dict = dict(
+            depth=6,
+            iterations=1_000,
+            l2_leaf_reg=3,
+            learning_rate=0.03,
+            random_strength=1,
+            rsm=1),
+        algorithm_sr: str = None,
+        num_features_to_select_it: int = None,
+        shap_calc_type_sr: str = None,
+        steps_it: int = None,
+        fit_params_dt: dict = dict(
+            algorithm='RecursiveByLossFunctionChange',
+            num_features_to_select=2,
+            shap_calc_type='Regular',
+            steps=1)):
+        assert model_type_sr in ['classification', 'regression']
+        self.model_type_sr = model_type_sr
+        self.depth_it = depth_it
+        self.iterations_it = iterations_it
+        self.l2_leaf_reg_ft = l2_leaf_reg_ft
+        self.learning_rate_ft = learning_rate_ft
+        self.random_strength_ft = random_strength_ft
+        self.rsm_ft = rsm_ft
+        self.init_params_dt = init_params_dt
         self.algorithm_sr = algorithm_sr
         self.num_features_to_select_it = num_features_to_select_it
+        self.shap_calc_type_sr = shap_calc_type_sr
         self.steps_it = steps_it
-    
-    def fit(self, X, y, **kwargs):
-        # Get params
-        params_dt = self.get_params()
+        self.fit_params_dt = fit_params_dt
 
-        # Update params
-        params_dt = update_params(params_dt=params_dt, X=X)
+    def fit(self, X, y):
+        # Get init params
+        init_params_dt = self.init_params_dt
+
+        # Update them
+        init_params_dt = update_params(params_dt=init_params_dt, X=X)
         
-        # Set params
-        self.set_params(**params_dt)
+        # Set them
+        for param_sr in ['depth_it', 'iterations_it', 'l2_leaf_reg_ft', 'learning_rate_ft', 'random_strength_ft', 'rsm_ft']:
+            param = getattr(self, param_sr)
+            if param:
+                init_params_dt.update({param_sr[:-3]: param})
+
+        # Initialize estimator
+        self.cbm = cb.CatBoostClassifier(**init_params_dt) if self.model_type_sr == 'classification' \
+            else cb.CatBoostRegressor(**init_params_dt)
+
+        # Get fit params
+        fit_params_dt = self.fit_params_dt
+
+        # Set them
+        for param_sr in ['algorithm_sr', 'num_features_to_select_it', 'shap_calc_type_sr', 'steps_it']:
+            param = getattr(self, param_sr)
+            if param:
+                fit_params_dt.update({param_sr[:-3]: param})
 
         # Select
-        select_features_dt = super().select_features(
+        select_features_dt = self.cbm.select_features(
             X=X, y=y, 
-            algorithm=self.algorithm_sr,
             features_for_select=range(X.shape[1]),
-            num_features_to_select=self.num_features_to_select_it,
-            steps=self.steps_it, 
-            train_final_model=False)
+            train_final_model=False, 
+            **fit_params_dt)
 
         # Get eliminated features
         self.eliminated_features_ss = pd.Series(
             data=select_features_dt['loss_graph']['loss_values'][1:], 
             index=select_features_dt['eliminated_features_names'], 
             name='losses')
-
-        # Update params
-        params_dt = update_params(
-            params_dt=params_dt, 
-            X=X.drop(columns=self.eliminated_features_ss.index))
-        
-        # Set params
-        self.set_params(**params_dt)
-
-        # Train final model
-        super().fit(X=X.drop(columns=self.eliminated_features_ss.index), y=y, **kwargs)
         return self
+
+    def transform(self, X):
+        return X.drop(columns=self.eliminated_features_ss.index)
     
 # =============================================================================
 # default_params_dt
@@ -451,8 +434,8 @@ class CatBoostRegressorWithSelection(cb.CatBoostRegressor):
     
 default_params_dt = dict(
     early_stopping_rounds=10, 
-    eval_fraction=0.2,
-    train_dir=tempfile.tempdir, 
+    eval_fraction=0.1,
+    learning_rate=0.03,
     use_best_model=True, 
     verbose=100) 
     
