@@ -427,6 +427,9 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
 
     def transform(self, X):
         return X.drop(columns=self.eliminated_features_ss.index)
+
+    def get_feature_names_out(self):
+        pass 
     
 # =============================================================================
 # default_params_dt
