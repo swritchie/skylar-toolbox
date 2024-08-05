@@ -434,7 +434,7 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
             index=select_features_dt['eliminated_features_names'], 
             name='losses')
         self.eliminated_features_ix = self.eliminated_features_ss.index if self.exact_elimination_bl \
-            else self.eliminated_features_ss.pipe(func=lambda x: x[:x.idxmin()].index)
+            else self.eliminated_features_ss.pipe(func=lambda x: x[:x[x == x.min()].index[-1]].index)
         return self
 
     def transform(self, X):
