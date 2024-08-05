@@ -348,6 +348,7 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
     def __init__(
         self, 
         model_type_sr: str,
+        auto_class_weights_sr: str = None,
         depth_it: int = None,
         eval_fraction_ft: float = None,
         iterations_it: int = None,
@@ -373,6 +374,7 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
             steps=1)):
         assert model_type_sr in ['classification', 'regression']
         self.model_type_sr = model_type_sr
+        self.auto_class_weights_sr = auto_class_weights_sr
         self.depth_it = depth_it
         self.eval_fraction_ft = eval_fraction_ft
         self.iterations_it = iterations_it
@@ -395,7 +397,7 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
         init_params_dt = update_params(params_dt=init_params_dt, X=X)
         
         # Set them
-        for param_sr in ['depth_it', 'eval_fraction_ft', 'iterations_it', 'l2_leaf_reg_ft', 'learning_rate_ft', 'random_strength_ft', 'rsm_ft']:
+        for param_sr in ['auto_class_weights_sr', 'depth_it', 'eval_fraction_ft', 'iterations_it', 'l2_leaf_reg_ft', 'learning_rate_ft', 'random_strength_ft', 'rsm_ft']:
             param = getattr(self, param_sr)
             if param:
                 init_params_dt.update({param_sr[:-3]: param})
