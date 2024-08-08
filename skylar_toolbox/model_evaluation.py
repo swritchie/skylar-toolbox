@@ -642,8 +642,9 @@ class ThresholdEvaluator:
     def __init__(self):
         pass
         
-    def fit(self, y_true, y_score, **kwargs):
+    def fit(self, y_true, y_score, target_names_lt=[0, 1], **kgargs):
         fpr_ay, tpr_ay, thresh_ay = snmes.roc_curve(y_true=y_true, y_score=y_score)
+        n_it, p_it = map(lambda x: y_true.value_counts().loc[x], target_names_lt)
         self.thresholded_metrics_df = (
             pd.DataFrame(data={
                 'fpr': fpr_ay, # Type I error
@@ -652,10 +653,10 @@ class ThresholdEvaluator:
             .assign(**{
                 'tnr': lambda x: 1 - x['fpr'],                         # Specificity, selectivity
                 'fnr': lambda x: 1 - x['tpr'],                         # Type II error, miss rate
-                'fp': lambda x: (x['fpr'] * neg_it).astype(dtype=int), # False alarm
-                'tp': lambda x: (x['tpr'] * pos_it).astype(dtype=int), # Hit
-                'tn': lambda x: (x['tnr'] * neg_it).astype(dtype=int),
-                'fn': lambda x: (x['fnr'] * pos_it).astype(dtype=int), # Miss
+                'fp': lambda x: (x['fpr'] * n_it).astype(dtype=int), # False alarm
+                'tp': lambda x: (x['tpr'] * p_it).astype(dtype=int), # Hit
+                'tn': lambda x: (x['tnr'] * n_it).astype(dtype=int),
+                'fn': lambda x: (x['fnr'] * p_it).astype(dtype=int), # Miss
                 'ppv': lambda x: x['tp'] / (x['tp'] + x['fp']),        # 'Positive predictive value', precision
                 'fdr': lambda x: 1 - x['ppv'],                         # 'False discovery rate'
                 'npv': lambda x: x['tn'] / (x['tn'] + x['fn']),        # 'Negative predictive value'
