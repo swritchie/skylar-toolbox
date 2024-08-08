@@ -455,6 +455,7 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
 default_params_dt = dict(
     early_stopping_rounds=10, 
     eval_fraction=0.1,
+    iterations=100,
     learning_rate=0.03,
     use_best_model=True, 
     verbose=100) 
