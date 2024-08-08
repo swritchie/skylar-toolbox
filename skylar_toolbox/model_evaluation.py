@@ -5,6 +5,7 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from scipy import stats as syss
 from sklearn import calibration as sncn
 from sklearn import metrics as snmes
 from skylar_toolbox import exploratory_data_analysis as steda
@@ -632,3 +633,62 @@ def set_titles(axes: plt.Axes):
         for index_it, title_sr in enumerate(iterable=['train', 'test']):
             axes[index_it].set(title=title_sr)
         return axes
+ 
+# =============================================================================
+# ThresholdEvaluator
+# =============================================================================
+
+class ThresholdEvaluator:
+    def __init__(self):
+        pass
+        
+    def fit(self, y_true, y_score, **kwargs):
+        fpr_ay, tpr_ay, thresh_ay = snmes.roc_curve(y_true=y_true, y_score=y_score)
+        self.thresholded_metrics_df = (
+            pd.DataFrame(data={
+                'fpr': fpr_ay, # Type I error
+                'tpr': tpr_ay  # Recall, sensitivity, power, hit rate
+            }, index=thresh_ay)
+            .assign(**{
+                'tnr': lambda x: 1 - x['fpr'],                         # Specificity, selectivity
+                'fnr': lambda x: 1 - x['tpr'],                         # Type II error, miss rate
+                'fp': lambda x: (x['fpr'] * neg_it).astype(dtype=int), # False alarm
+                'tp': lambda x: (x['tpr'] * pos_it).astype(dtype=int), # Hit
+                'tn': lambda x: (x['tnr'] * neg_it).astype(dtype=int),
+                'fn': lambda x: (x['fnr'] * pos_it).astype(dtype=int), # Miss
+                'ppv': lambda x: x['tp'] / (x['tp'] + x['fp']),        # 'Positive predictive value', precision
+                'fdr': lambda x: 1 - x['ppv'],                         # 'False discovery rate'
+                'npv': lambda x: x['tn'] / (x['tn'] + x['fn']),        # 'Negative predictive value'
+                'for': lambda x: 1 - x['npv'],                         # 'False omission rate'
+                'f1': lambda x: x[['tpr', 'ppv']].apply(func=syss.hmean, axis=1),
+                'acc': lambda x: x[['tp', 'tn']].sum(axis=1) / x.select_dtypes(include=int).sum(axis=1),
+                'bacc': lambda x: x[['tpr', 'tnr']].mean(axis=1)})
+            .mask(cond=lambda x: x == float('inf')))
+        return self
+    
+    def plot_rates(self):
+        return self.thresholded_metrics_df[['tpr', 'tnr', 'fnr', 'fpr']].plot()
+    
+    def plot_values(self):
+        return self.thresholded_metrics_df[['ppv', 'npv', 'fdr', 'for']].plot()
+    
+    def plot_bacc_f1(self):
+        metrics_lt = ['bacc', 'f1']
+        ax = self.thresholded_metrics_df[metrics_lt].plot()
+        
+        for index_it, metric_sr in enumerate(iterable=metrics_lt):
+            ss = self.thresholded_metrics_df[metric_sr]
+            ss.pipe(func=lambda x: ax.scatter(x=x.idxmax(), y=x.max(), c=f'C{index_it}'))
+            ss.pipe(func=lambda x: ax.axvline(x=x.idxmax(), c=f'C{index_it}', ls='--'))
+            
+        ax.axhline(c='k', ls=':')
+        return ax
+    
+    def plot_counts(self):
+        return (
+            self.thresholded_metrics_df
+            .select_dtypes(include=int)
+            .sort_index()
+            .rename(index=lambda x: round(number=x, ndigits=3))
+            .pipe(func=lambda x: x.iloc[::x.shape[0] // int(2e1), :])
+            .plot(kind='bar', stacked=True))
