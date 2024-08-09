@@ -5,7 +5,6 @@
 import catboost as cb
 import numpy as np
 import pandas as pd
-import tempfile
 from catboost import monoforest as cbmf
 from catboost import utils as cbus
 from matplotlib import pyplot as plt
