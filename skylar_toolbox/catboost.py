@@ -304,12 +304,12 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
         eval_fraction_ft: float = None,
         learning_rate_ft: float = None,
         init_params_dt: dict = dict(),
+        algorithm_sr: str = None, 
         num_features_to_select_it: int = None,
         steps_it: int = None,
         fit_params_dt: dict = dict(
             algorithm='RecursiveByLossFunctionChange',
             num_features_to_select=1,
-            shap_calc_type='Regular',
             steps=1)):
         assert model_type_sr in ['classification', 'regression']
         self.model_type_sr = model_type_sr
@@ -319,6 +319,7 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
         self.eval_fraction_ft = eval_fraction_ft
         self.learning_rate_ft = learning_rate_ft
         self.init_params_dt = init_params_dt
+        self.algorithm_sr = algorithm_sr
         self.num_features_to_select_it = num_features_to_select_it
         self.steps_it = steps_it
         self.fit_params_dt = fit_params_dt
@@ -344,7 +345,7 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
         fit_params_dt = self.fit_params_dt
 
         # Set them
-        for param_sr in ['num_features_to_select_it', 'steps_it']:
+        for param_sr in ['algorithm_sr', 'num_features_to_select_it', 'steps_it']:
             param = getattr(self, param_sr)
             if param:
                 fit_params_dt.update({param_sr[:-3]: param})
