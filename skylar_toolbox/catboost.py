@@ -5,59 +5,10 @@
 import catboost as cb
 import numpy as np
 import pandas as pd
-import tempfile
 from catboost import monoforest as cbmf
 from catboost import utils as cbus
 from matplotlib import pyplot as plt
 from sklearn import base as snbe
-
-# =============================================================================
-# AbsoluteDifferenceCallback
-# =============================================================================
-
-class AbsoluteDifferenceCallback:
-    def __init__(
-        self, 
-        metric_sr: str, 
-        threshold_ft: float = 0.01):
-        '''
-        Stops training when difference between learn and validation metrics surpasses threshold
-        
-        Parameters
-        ----------
-        metric_sr : str
-            Metric.
-        threshold_ft : float, optional
-            Threshold. The default is 0.01.
-        
-        Returns
-        -------
-        None.
-        '''
-        self.metric_sr = metric_sr
-        self.threshold_ft = threshold_ft
-
-    def after_iteration(
-            self, 
-            info):
-        '''
-        Checks whether to stop
-        
-        Parameters
-        ----------
-        info : TYPE
-            DESCRIPTION.
-        
-        Returns
-        -------
-        continue_bl : bool
-            Flag for whether to continue.
-        '''
-        learn_metric_ft = info.metrics['learn'][self.metric_sr][-1]
-        validation_metric_ft = info.metrics['validation'][self.metric_sr][-1]
-        difference_ft = abs(validation_metric_ft - learn_metric_ft)
-        continue_bl = difference_ft < self.threshold_ft
-        return continue_bl
 
 # =============================================================================
 # CatBoostClassifier
@@ -449,17 +400,30 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
         return ax
     
 # =============================================================================
-# default_params_dt
+# get_default_params
 # =============================================================================
-    
-default_params_dt = dict(
-    early_stopping_rounds=10, 
-    eval_fraction=0.1,
-    iterations=100,
-    learning_rate=0.03,
-    use_best_model=True, 
-    verbose=100) 
-    
+   
+def get_default_params():
+    default_params_dt = dict(
+        early_stopping_rounds=10,
+        eval_fraction=0.1,
+        learning_rate=0.03,
+        use_best_model=True,
+        verbose=100)
+    return default_params_dt
+
+# =============================================================================
+# get_evals_result
+# =============================================================================
+
+def get_evals_result(cbm):
+    evals_result_df = (
+        pd.DataFrame(data=cbm.evals_result_)
+        .stack()
+        .apply(func=pd.Series)
+        .T)
+    return evals_result_df
+
 # =============================================================================
 # MonoForestInspector
 # =============================================================================
@@ -538,6 +502,27 @@ class MonoForestInspector:
         return fig
     
 # =============================================================================
+# plot_evals_result
+# =============================================================================
+
+def plot_evals_result(evals_result_df):
+    metrics_ix = (
+        evals_result_df.columns
+        .get_level_values(level=0)
+        .drop_duplicates())
+    fig, axes = plt.subplots(
+        nrows=metrics_ix.shape[0], 
+        sharex=True, 
+        squeeze=False, 
+        figsize=(10, 3 * metrics_ix.shape[0]))
+    
+    for index_it, metric_sr in enumerate(iterable=metrics_ix):
+        evals_result_df[metric_sr].plot(title=metric_sr, ax=axes.ravel()[index_it])
+        
+    fig.tight_layout()
+    return fig
+
+# =============================================================================
 # update_params
 # =============================================================================
 
@@ -582,3 +567,103 @@ def update_params(
         cat_features=new_cat_features_lt, 
         monotone_constraints=new_monotone_constraints_dt)
     return params_dt
+
+# =============================================================================
+# ValidationChangeCallback
+# =============================================================================
+
+class ValidationChangeCallback:
+    def __init__(
+        self, 
+        metric_sr: str, 
+        threshold_ft: float = 0.0001):
+        '''
+        Stops training when change in validation metric surpasses threshold
+        
+        Parameters
+        ----------
+        metric_sr : str
+            Metric.
+        threshold_ft : float, optional
+            Threshold. The default is 0.0001.
+        
+        Returns
+        -------
+        None.
+        '''
+        self.metric_sr = metric_sr
+        self.threshold_ft = threshold_ft
+
+    def after_iteration(
+            self, 
+            info):
+        '''
+        Checks whether to stop
+        
+        Parameters
+        ----------
+        info : TYPE
+            DESCRIPTION.
+        
+        Returns
+        -------
+        continue_bl : bool
+            Flag for whether to continue.
+        '''
+        try:
+            first_ft, second_ft = map(
+                lambda x: info.metrics['validation'][self.metric_sr][x], 
+                [-2, -1])
+            change_ft = abs(second_ft - first_ft)
+            continue_bl = change_ft > self.threshold_ft
+        except Exception as en:
+            continue_bl = True
+        return continue_bl
+
+# =============================================================================
+# ValidationDifferenceCallback
+# =============================================================================
+
+class ValidationDifferenceCallback:
+    def __init__(
+        self,
+        metric_sr: str,
+        threshold_ft: float = 0.01):
+        '''
+        Stops training when difference between learn and validation metrics surpasses threshold
+
+        Parameters
+        ----------
+        metric_sr : str
+            Metric.
+        threshold_ft : float, optional
+            Threshold. The default is 0.01.
+
+        Returns
+        -------
+        None.
+        '''
+        self.metric_sr = metric_sr
+        self.threshold_ft = threshold_ft
+
+    def after_iteration(
+            self,
+            info):
+        '''
+        Checks whether to stop
+
+        Parameters
+        ----------
+        info : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        continue_bl : bool
+            Flag for whether to continue.
+        '''
+        learn_metric_ft = info.metrics['learn'][self.metric_sr][-1]
+        validation_metric_ft = info.metrics['validation'][self.metric_sr][-1]
+        difference_ft = abs(validation_metric_ft - learn_metric_ft)
+        continue_bl = difference_ft < self.threshold_ft
+        return continue_bl
