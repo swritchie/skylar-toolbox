@@ -129,14 +129,14 @@ class ClassificationEvaluator:
     
     def plot_confusion_matrix(
             self, 
-            from_predictions_dt: dict = dict()):
+            from_predictions_dt: dict = dict(normalize='all')):
         '''
         Plots confusion matrix
 
         Parameters
         ----------
         from_predictions_dt : dict, optional
-            Arguments passed to .from_predictions(). The default is dict().
+            Arguments passed to .from_predictions(). The default is dict(normalize='all').
 
         Returns
         -------
