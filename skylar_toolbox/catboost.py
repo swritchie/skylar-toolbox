@@ -502,6 +502,27 @@ class MonoForestInspector:
         return fig
     
 # =============================================================================
+# plot_evals_result
+# =============================================================================
+
+def plot_evals_result(evals_result_df):
+    metrics_ix = (
+        evals_result_df.columns
+        .get_level_values(level=0)
+        .drop_duplicates())
+    fig, axes = plt.subplots(
+        nrows=metrics_ix.shape[0], 
+        sharex=True, 
+        squeeze=False, 
+        figsize=(10, 3 * metrics_ix.shape[0]))
+    
+    for index_it, metric_sr in enumerate(iterable=metrics_ix):
+        evals_result_df[metric_sr].plot(title=metric_sr, ax=axes.ravel()[index_it])
+        
+    fig.tight_layout()
+    return fig
+
+# =============================================================================
 # update_params
 # =============================================================================
 
