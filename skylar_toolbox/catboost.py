@@ -300,49 +300,26 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
         self, 
         model_type_sr: str,
         exact_elimination_bl: bool = False,
-        auto_class_weights_sr: str = None,
         depth_it: int = None,
         eval_fraction_ft: float = None,
-        iterations_it: int = None,
-        l2_leaf_reg_ft: float = None,
         learning_rate_ft: float = None,
-        random_strength_ft: float = None, 
-        rsm_ft: float = None,
-        scale_pos_weight_ft: float = None, 
-        init_params_dt: dict = dict(
-            depth=6,
-            iterations=1_000,
-            l2_leaf_reg=3,
-            learning_rate=0.03,
-            random_strength=1,
-            rsm=1),
-        algorithm_sr: str = None,
+        init_params_dt: dict = dict(),
         num_features_to_select_it: int = None,
-        shap_calc_type_sr: str = None,
         steps_it: int = None,
         fit_params_dt: dict = dict(
             algorithm='RecursiveByLossFunctionChange',
-            num_features_to_select=2,
+            num_features_to_select=1,
             shap_calc_type='Regular',
             steps=1)):
         assert model_type_sr in ['classification', 'regression']
         self.model_type_sr = model_type_sr
         assert exact_elimination_bl in [True, False]
         self.exact_elimination_bl = exact_elimination_bl
-        self.auto_class_weights_sr = auto_class_weights_sr
         self.depth_it = depth_it
         self.eval_fraction_ft = eval_fraction_ft
-        self.iterations_it = iterations_it
-        self.l2_leaf_reg_ft = l2_leaf_reg_ft
         self.learning_rate_ft = learning_rate_ft
-        self.random_strength_ft = random_strength_ft
-        self.rsm_ft = rsm_ft
-        self.scale_pos_weight_ft = scale_pos_weight_ft
         self.init_params_dt = init_params_dt
-        assert algorithm_sr in [None, 'RecursiveByLossFunctionChange', 'RecursiveByShapValues']
-        self.algorithm_sr = algorithm_sr
         self.num_features_to_select_it = num_features_to_select_it
-        self.shap_calc_type_sr = shap_calc_type_sr
         self.steps_it = steps_it
         self.fit_params_dt = fit_params_dt
 
@@ -354,7 +331,7 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
         init_params_dt = update_params(params_dt=init_params_dt, X=X)
         
         # Set them
-        for param_sr in ['auto_class_weights_sr', 'depth_it', 'eval_fraction_ft', 'iterations_it', 'l2_leaf_reg_ft', 'learning_rate_ft', 'random_strength_ft', 'rsm_ft', 'scale_pos_weight_ft']:
+        for param_sr in ['depth_it', 'eval_fraction_ft', 'learning_rate_ft']:
             param = getattr(self, param_sr)
             if param:
                 init_params_dt.update({param_sr[:-3]: param})
@@ -367,7 +344,7 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
         fit_params_dt = self.fit_params_dt
 
         # Set them
-        for param_sr in ['algorithm_sr', 'num_features_to_select_it', 'shap_calc_type_sr', 'steps_it']:
+        for param_sr in ['num_features_to_select_it', 'steps_it']:
             param = getattr(self, param_sr)
             if param:
                 fit_params_dt.update({param_sr[:-3]: param})
