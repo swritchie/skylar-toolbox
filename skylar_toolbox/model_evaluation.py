@@ -652,10 +652,10 @@ class ThresholdEvaluator:
             .assign(**{
                 'tnr': lambda x: 1 - x['fpr'],                         # Specificity, selectivity
                 'fnr': lambda x: 1 - x['tpr'],                         # Type II error, miss rate
-                'fp': lambda x: (x['fpr'] * n_it).astype(dtype=int), # False alarm
-                'tp': lambda x: (x['tpr'] * p_it).astype(dtype=int), # Hit
+                'fp': lambda x: (x['fpr'] * n_it).astype(dtype=int),   # False alarm
+                'tp': lambda x: (x['tpr'] * p_it).astype(dtype=int),   # Hit
                 'tn': lambda x: (x['tnr'] * n_it).astype(dtype=int),
-                'fn': lambda x: (x['fnr'] * p_it).astype(dtype=int), # Miss
+                'fn': lambda x: (x['fnr'] * p_it).astype(dtype=int),   # Miss
                 'ppv': lambda x: x['tp'] / (x['tp'] + x['fp']),        # 'Positive predictive value', precision
                 'fdr': lambda x: 1 - x['ppv'],                         # 'False discovery rate'
                 'npv': lambda x: x['tn'] / (x['tn'] + x['fn']),        # 'Negative predictive value'
