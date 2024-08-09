@@ -157,14 +157,14 @@ class ClassificationEvaluator:
     
     def plot_roc_curve(
             self, 
-            from_predictions_dt: dict = dict()):
+            from_predictions_dt: dict = dict(plot_chance_level=True)):
         '''
         Plots ROC curve
 
         Parameters
         ----------
         from_predictions_dt : dict, optional
-            Arguments passed to .from_predictions(). The default is dict().
+            Arguments passed to .from_predictions(). The default is dict(plot_chance_level=True).
 
         Returns
         -------
@@ -181,14 +181,14 @@ class ClassificationEvaluator:
     
     def plot_pr_curve(
             self, 
-            from_predictions_dt: dict = dict()):
+            from_predictions_dt: dict = dict(plot_chance_level=True)):
         '''
         Plots PR curve
 
         Parameters
         ----------
         from_predictions_dt : dict, optional
-            Arguments passed to .from_predictions(). The default is dict().
+            Arguments passed to .from_predictions(). The default is dict(plot_chance_level=True).
 
         Returns
         -------
