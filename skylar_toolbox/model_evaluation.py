@@ -129,14 +129,14 @@ class ClassificationEvaluator:
     
     def plot_confusion_matrix(
             self, 
-            from_predictions_dt: dict = dict()):
+            from_predictions_dt: dict = dict(normalize='all')):
         '''
         Plots confusion matrix
 
         Parameters
         ----------
         from_predictions_dt : dict, optional
-            Arguments passed to .from_predictions(). The default is dict().
+            Arguments passed to .from_predictions(). The default is dict(normalize='all').
 
         Returns
         -------
@@ -157,14 +157,14 @@ class ClassificationEvaluator:
     
     def plot_roc_curve(
             self, 
-            from_predictions_dt: dict = dict()):
+            from_predictions_dt: dict = dict(plot_chance_level=True)):
         '''
         Plots ROC curve
 
         Parameters
         ----------
         from_predictions_dt : dict, optional
-            Arguments passed to .from_predictions(). The default is dict().
+            Arguments passed to .from_predictions(). The default is dict(plot_chance_level=True).
 
         Returns
         -------
@@ -181,14 +181,14 @@ class ClassificationEvaluator:
     
     def plot_pr_curve(
             self, 
-            from_predictions_dt: dict = dict()):
+            from_predictions_dt: dict = dict(plot_chance_level=True)):
         '''
         Plots PR curve
 
         Parameters
         ----------
         from_predictions_dt : dict, optional
-            Arguments passed to .from_predictions(). The default is dict().
+            Arguments passed to .from_predictions(). The default is dict(plot_chance_level=True).
 
         Returns
         -------
@@ -411,7 +411,6 @@ class RegressionEvaluator:
                 'neg_mean_absolute_error',
                 'neg_mean_absolute_percentage_error',
                 'neg_mean_squared_error',
-                'neg_mean_squared_log_error',
                 'neg_median_absolute_error',
                 'r2']):
         '''
@@ -422,7 +421,7 @@ class RegressionEvaluator:
         estimator : TYPE
             DESCRIPTION.
         metrics_lt : list, optional
-            DESCRIPTION. The default is ['explained_variance', 'max_error', 'neg_mean_absolute_error', 'neg_mean_absolute_percentage_error', 'neg_mean_squared_error', 'neg_mean_squared_log_error', 'neg_median_absolute_error', 'r2'].
+            DESCRIPTION. The default is ['explained_variance', 'max_error', 'neg_mean_absolute_error', 'neg_mean_absolute_percentage_error', 'neg_mean_squared_error', 'neg_median_absolute_error', 'r2'].
 
         Returns
         -------
@@ -653,10 +652,10 @@ class ThresholdEvaluator:
             .assign(**{
                 'tnr': lambda x: 1 - x['fpr'],                         # Specificity, selectivity
                 'fnr': lambda x: 1 - x['tpr'],                         # Type II error, miss rate
-                'fp': lambda x: (x['fpr'] * n_it).astype(dtype=int), # False alarm
-                'tp': lambda x: (x['tpr'] * p_it).astype(dtype=int), # Hit
+                'fp': lambda x: (x['fpr'] * n_it).astype(dtype=int),   # False alarm
+                'tp': lambda x: (x['tpr'] * p_it).astype(dtype=int),   # Hit
                 'tn': lambda x: (x['tnr'] * n_it).astype(dtype=int),
-                'fn': lambda x: (x['fnr'] * p_it).astype(dtype=int), # Miss
+                'fn': lambda x: (x['fnr'] * p_it).astype(dtype=int),   # Miss
                 'ppv': lambda x: x['tp'] / (x['tp'] + x['fp']),        # 'Positive predictive value', precision
                 'fdr': lambda x: 1 - x['ppv'],                         # 'False discovery rate'
                 'npv': lambda x: x['tn'] / (x['tn'] + x['fn']),        # 'Negative predictive value'
