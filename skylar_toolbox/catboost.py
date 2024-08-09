@@ -400,17 +400,30 @@ class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
         return ax
     
 # =============================================================================
-# default_params_dt
+# get_default_params
 # =============================================================================
-    
-default_params_dt = dict(
-    early_stopping_rounds=10, 
-    eval_fraction=0.1,
-    iterations=100,
-    learning_rate=0.03,
-    use_best_model=True, 
-    verbose=100) 
-    
+   
+def get_default_params():
+    default_params_dt = dict(
+        early_stopping_rounds=10,
+        eval_fraction=0.1,
+        learning_rate=0.03,
+        use_best_model=True,
+        verbose=100)
+    return default_params_dt
+
+# =============================================================================
+# get_evals_result
+# =============================================================================
+
+def get_evals_result(cbm):
+    evals_result_df = (
+        pd.DataFrame(data=cbm.evals_result_)
+        .stack()
+        .apply(func=pd.Series)
+        .T)
+    return evals_result_df
+
 # =============================================================================
 # MonoForestInspector
 # =============================================================================
