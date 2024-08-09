@@ -411,7 +411,6 @@ class RegressionEvaluator:
                 'neg_mean_absolute_error',
                 'neg_mean_absolute_percentage_error',
                 'neg_mean_squared_error',
-                'neg_mean_squared_log_error',
                 'neg_median_absolute_error',
                 'r2']):
         '''
@@ -422,7 +421,7 @@ class RegressionEvaluator:
         estimator : TYPE
             DESCRIPTION.
         metrics_lt : list, optional
-            DESCRIPTION. The default is ['explained_variance', 'max_error', 'neg_mean_absolute_error', 'neg_mean_absolute_percentage_error', 'neg_mean_squared_error', 'neg_mean_squared_log_error', 'neg_median_absolute_error', 'r2'].
+            DESCRIPTION. The default is ['explained_variance', 'max_error', 'neg_mean_absolute_error', 'neg_mean_absolute_percentage_error', 'neg_mean_squared_error', 'neg_median_absolute_error', 'r2'].
 
         Returns
         -------
