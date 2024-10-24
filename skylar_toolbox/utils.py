@@ -3,7 +3,6 @@
 # =============================================================================
 
 import datetime
-import time
 
 # =============================================================================
 # print_sequence
@@ -40,9 +39,8 @@ def print_sequence(
 
 def time_callable(callable_):
     def wrap_callable(*pargs, **kwargs):
-        start_ft = time.perf_counter()
+        now_dt = datetime.datetime.now()
         result = callable_(*pargs, **kwargs)
-        end_ft = time.perf_counter()
-        print(f'{callable_.__qualname__} - {datetime.timedelta(seconds=end_ft - start_ft)}')
+        print(f'{callable_.__qualname__} - {str(datetime.datetime.now() - now_dt)}')
         return result
     return wrap_callable
