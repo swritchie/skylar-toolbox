@@ -43,6 +43,7 @@ class AggregationEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
             # Join
             return X.join(other=X_agg)
         return X
+    def get_feature_names_out(): pass
     def plot(self): return self.mutual_info_ss.plot(kind='barh')
 
 # =============================================================================
@@ -76,6 +77,7 @@ class InteractionEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
             .index[0])
         return self
     def transform(self, X): return X.assign(**{self.best_sr: self.assign_dt[self.best_sr]})
+    def get_feature_names_out(): pass
     def plot(self): return self.mutual_info_ss.plot(kind='barh')
     def _add(self, x): return x[self.feature_sr] + x[self.feature_sr2]
     def _sub(self, x): return x[self.feature_sr] - x[self.feature_sr2]
@@ -83,3 +85,31 @@ class InteractionEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
     def _mul(self, x): return x[self.feature_sr] * x[self.feature_sr2]
     def _div(self, x): return x[self.feature_sr] / (x[self.feature_sr2] + 1e-10)
     def _div2(self, x): return x[self.feature_sr2] / (x[self.feature_sr] + 1e-10)
+
+# =============================================================================
+# TypeCaster
+# =============================================================================
+
+class TypeCaster(snbe.BaseEstimator, snbe.TransformerMixin):
+    def __init__(self, type_sr, features_lt=None): self.type_sr, self.features_lt = type_sr, features_lt
+    def fit(self, X, y=None):
+        self.old_dtypes_dt = X.dtypes.to_dict()
+        if self.features_lt: self.new_dtypes_dt = {
+            feature_sr: self.type_sr if feature_sr in self.features_lt else dtype
+            for feature_sr, dtype in self.old_dtypes_dt.items()}
+        else: self.new_dtypes_dt = {feature_sr: self.type_sr for feature_sr in X.columns}
+        return self
+    def transform(self, X): return X.astype(dtype=self.new_dtypes_dt)
+    def get_feature_names_out(): pass
+
+# =============================================================================
+# TypeDowncaster
+# =============================================================================
+
+class TypeDowncaster(snbe.BaseEstimator, snbe.TransformerMixin):
+    def fit(self, X, y=None): return self
+    def transform(self, X): return X.pipe(func=lambda x: pd.concat(objs=[
+        x.select_dtypes(exclude='number').apply(func=pd.to_datetime, errors='ignore'),
+        x.select_dtypes(include=int).apply(func=pd.to_numeric, errors='ignore', downcast='integer'),
+        x.select_dtypes(include=float).apply(func=pd.to_numeric, errors='ignore', downcast='float')], axis=1))
+    def get_feature_names_out(): pass
