@@ -43,6 +43,7 @@ class AggregationEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
             # Join
             return X.join(other=X_agg)
         return X
+    def get_feature_names_out(): pass
     def plot(self): return self.mutual_info_ss.plot(kind='barh')
 
 # =============================================================================
@@ -76,6 +77,7 @@ class InteractionEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
             .index[0])
         return self
     def transform(self, X): return X.assign(**{self.best_sr: self.assign_dt[self.best_sr]})
+    def get_feature_names_out(): pass
     def plot(self): return self.mutual_info_ss.plot(kind='barh')
     def _add(self, x): return x[self.feature_sr] + x[self.feature_sr2]
     def _sub(self, x): return x[self.feature_sr] - x[self.feature_sr2]
