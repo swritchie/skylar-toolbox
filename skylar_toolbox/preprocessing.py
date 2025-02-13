@@ -39,7 +39,7 @@ class AggregationEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
             X_subset = X.loc[:, self.features_ix]
             # Engineer aggregations
             labels_ix = self.best_ix + '-' + self.name_sr if self.name_sr else self.best_ix + '-' + '-'.join(self.features_ix)
-            X_agg = X_subset.agg(func=self.best_ix.tolist(), axis=1).set_axis(labels=labels_ix, axis=1))
+            X_agg = X_subset.agg(func=self.best_ix.tolist(), axis=1).set_axis(labels=labels_ix, axis=1)
             # Join
             return X.join(other=X_agg)
         return X
