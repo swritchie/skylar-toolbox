@@ -113,81 +113,6 @@ class CatBoostRegressor(cb.CatBoostRegressor):
         return super().fit(X=X, y=y, **kwargs)
     
 # =============================================================================
-# CatBoostSelector
-# =============================================================================
-   
-class CatBoostSelector(snbe.BaseEstimator, snbe.TransformerMixin):
-    def __init__(
-        self, 
-        model_type_sr, exact_elimination_bl=False,
-        depth_it=None, eval_fraction_ft=None, learning_rate_ft=None, init_params_dt=dict(),
-        algorithm_sr=None, num_features_to_select_it=None, steps_it=None, fit_params_dt=dict(
-            algorithm='RecursiveByLossFunctionChange', num_features_to_select=1, steps=1)):
-        assert model_type_sr in ['classification', 'regression']
-        assert exact_elimination_bl in [True, False]
-        self.model_type_sr, self.exact_elimination_bl = model_type_sr, exact_elimination_bl
-        self.depth_it, self.eval_fraction_ft, self.learning_rate_ft, self.init_params_dt = \
-            depth_it, eval_fraction_ft, learning_rate_ft, init_params_dt
-        self.algorithm_sr, self.num_features_to_select_it, self.steps_it, self.fit_params_dt = \
-            algorithm_sr, num_features_to_select_it, steps_it, fit_params_dt
-    def fit(self, X, y):
-        # Get init params
-        init_params_dt = self.init_params_dt
-        # Update them
-        init_params_dt = update_params(params_dt=init_params_dt, X=X)
-        # Set them
-        for param_sr in ['depth_it', 'eval_fraction_ft', 'learning_rate_ft']:
-            param = getattr(self, param_sr)
-            if param: init_params_dt.update({param_sr[:-3]: param})
-        # Initialize estimator
-        self.cbm = cb.CatBoostClassifier(**init_params_dt) if self.model_type_sr == 'classification' \
-            else cb.CatBoostRegressor(**init_params_dt)
-        # Get fit params
-        fit_params_dt = self.fit_params_dt
-        # Set them
-        for param_sr in ['algorithm_sr', 'num_features_to_select_it', 'steps_it']:
-            param = getattr(self, param_sr)
-            if param: fit_params_dt.update({param_sr[:-3]: param})
-        # Select
-        select_features_dt = self.cbm.select_features(
-            X=X, y=y, 
-            features_for_select=range(X.shape[1]), train_final_model=False, **fit_params_dt)
-        # Get eliminated features
-        self.eliminated_features_ss = pd.Series(
-            data=select_features_dt['loss_graph']['loss_values'][1:], 
-            index=select_features_dt['eliminated_features_names'], name='losses')
-        self.eliminated_features_ix = self.eliminated_features_ss.index if self.exact_elimination_bl \
-            else self.eliminated_features_ss.pipe(func=lambda x: x[:x[x == x.min()].index[-1]].index)
-        return self
-    def transform(self, X): return X.drop(columns=self.eliminated_features_ix)
-    def get_feature_names_out(self): pass
-    def plot(self):
-        ax = self.eliminated_features_ss.reset_index(drop=True).plot(c='lightgrey')
-        self.eliminated_features_ss[self.eliminated_features_ix].reset_index(drop=True).plot(c='tab:blue', lw=2, ax=ax)
-        return ax
-    
-# =============================================================================
-# get_default_params
-# =============================================================================
-   
-def get_default_params(): return dict(
-    early_stopping_rounds=int(1e1),
-    eval_fraction=2e-1,
-    learning_rate=3e-2,
-    use_best_model=True,
-    verbose=int(1e2))
-
-# =============================================================================
-# get_evals_result
-# =============================================================================
-
-def get_evals_result(cbm): return (
-    pd.DataFrame(data=cbm.evals_result_)
-    .stack()
-    .apply(func=pd.Series)
-    .T)
-
-# =============================================================================
 # MonoForestInspector
 # =============================================================================
 
@@ -223,6 +148,71 @@ class MonoForestInspector:
         data_ss = weight_ss.describe().round(decimals=3)
         pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 2.5e-1, 1])
         return ax.figure
+
+# =============================================================================
+# ValidationChangeCallback
+# =============================================================================
+
+class ValidationChangeCallback:
+    def __init__(self, metric_sr, threshold_ft=1e-4): self.metric_sr, self.threshold_ft = metric_sr, threshold_ft
+    def after_iteration(self, info):
+        try:
+            first_ft, second_ft = map(lambda x: info.metrics['validation'][self.metric_sr][x], [-2, -1])
+            change_ft = abs(second_ft - first_ft)
+            continue_bl = change_ft > self.threshold_ft
+        except Exception as en: continue_bl = True
+        return continue_bl
+
+# =============================================================================
+# ValidationDifferenceCallback
+# =============================================================================
+
+class ValidationDifferenceCallback:
+    def __init__(self, metric_sr, threshold_ft=1e-2): self.metric_sr, self.threshold_ft = metric_sr, threshold_ft
+    def after_iteration(self, info):
+        learn_metric_ft = info.metrics['learn'][self.metric_sr][-1]
+        validation_metric_ft = info.metrics['validation'][self.metric_sr][-1]
+        difference_ft = abs(validation_metric_ft - learn_metric_ft)
+        continue_bl = difference_ft < self.threshold_ft
+        return continue_bl
+
+# =============================================================================
+# get_default_params
+# =============================================================================
+   
+def get_default_params(): return dict(
+    early_stopping_rounds=int(1e1),
+    use_best_model=True,
+    verbose=int(1e2))
+
+# =============================================================================
+# get_evals_result
+# =============================================================================
+
+def get_evals_result(cbm): return pd.DataFrame(data=cbm.evals_result_).stack().apply(func=pd.Series).T
+
+# =============================================================================
+# get_selected_features
+# =============================================================================
+
+def get_selected_features(select_features_dt):
+    eliminated_features_ss = pd.Series(
+        data=select_features_dt['loss_graph']['loss_values'][1:], index=select_features_dt['eliminated_features_names'])
+    eliminated_features_ix = eliminated_features_ss.index
+    selected_features_ix = pd.Index(data=select_features_dt['selected_features_names'])
+    min_loss_ft = eliminated_features_ss.min()
+    optimal_eliminated_features_ss = eliminated_features_ss.pipe(func=lambda x: x[:x.tolist().index(min_loss_ft)])
+    optimal_eliminated_features_ix = optimal_eliminated_features_ss.index
+    optimal_selected_features_ix = (
+        eliminated_features_ix
+        .difference(other=optimal_eliminated_features_ix)
+        .union(other=selected_features_ix))
+    return dict(
+        eliminated_features_ss=eliminated_features_ss,
+        eliminated_features_ix=eliminated_features_ix, selected_features_ix=selected_features_ix,
+        min_loss_ft=min_loss_ft, optimal_eliminated_features_ss=optimal_eliminated_features_ss,
+        optimal_eliminated_features_ix=optimal_eliminated_features_ix, optimal_selected_features_ix=optimal_selected_features_ix)
+
     
 # =============================================================================
 # plot_evals_result
@@ -263,30 +253,3 @@ def update_params(params_dt, X):
     # Update
     params_dt.update(cat_features=new_cat_features_lt, monotone_constraints=new_monotone_constraints_dt)
     return params_dt
-
-# =============================================================================
-# ValidationChangeCallback
-# =============================================================================
-
-class ValidationChangeCallback:
-    def __init__(self, metric_sr, threshold_ft=1e-4): self.metric_sr, self.threshold_ft = metric_sr, threshold_ft
-    def after_iteration(self, info):
-        try:
-            first_ft, second_ft = map(lambda x: info.metrics['validation'][self.metric_sr][x], [-2, -1])
-            change_ft = abs(second_ft - first_ft)
-            continue_bl = change_ft > self.threshold_ft
-        except Exception as en: continue_bl = True
-        return continue_bl
-
-# =============================================================================
-# ValidationDifferenceCallback
-# =============================================================================
-
-class ValidationDifferenceCallback:
-    def __init__(self, metric_sr, threshold_ft=1e-2): self.metric_sr, self.threshold_ft = metric_sr, threshold_ft
-    def after_iteration(self, info):
-        learn_metric_ft = info.metrics['learn'][self.metric_sr][-1]
-        validation_metric_ft = info.metrics['validation'][self.metric_sr][-1]
-        difference_ft = abs(validation_metric_ft - learn_metric_ft)
-        continue_bl = difference_ft < self.threshold_ft
-        return continue_bl
