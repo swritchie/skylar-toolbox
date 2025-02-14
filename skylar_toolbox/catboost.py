@@ -125,11 +125,29 @@ def get_default_params(): return dict(
 # get_evals_result
 # =============================================================================
 
-def get_evals_result(cbm): return (
-    pd.DataFrame(data=cbm.evals_result_)
-    .stack()
-    .apply(func=pd.Series)
-    .T)
+def get_evals_result(cbm): return pd.DataFrame(data=cbm.evals_result_).stack().apply(func=pd.Series).T
+
+# =============================================================================
+# get_selected_features
+# =============================================================================
+
+def get_selected_features(select_features_dt):
+    eliminated_features_ss = pd.Series(
+        data=select_features_dt['loss_graph']['loss_values'][1:], index=select_features_dt['eliminated_features_names'])
+    eliminated_features_ix = eliminated_features_ss.index
+    selected_features_ix = pd.Index(data=select_features_dt['selected_features_names'])
+    min_loss_ft = eliminated_features_ss.min()
+    optimal_eliminated_features_ss = eliminated_features_ss.pipe(func=lambda x: x[:x.tolist().index(min_loss_ft)])
+    optimal_eliminated_features_ix = optimal_eliminated_features_ss.index
+    optimal_selected_features_ix = (
+        eliminated_features_ix
+        .difference(other=optimal_eliminated_features_ix)
+        .union(other=selected_features_ix))
+    return dict(
+        eliminated_features_ss=eliminated_features_ss,
+        eliminated_features_ix=eliminated_features_ix, selected_features_ix=selected_features_ix,
+        min_loss_ft=min_loss_ft, optimal_eliminated_features_ss=optimal_eliminated_features_ss,
+        optimal_eliminated_features_ix=optimal_eliminated_features_ix, optimal_selected_features_ix=optimal_selected_features_ix)
 
 # =============================================================================
 # MonoForestInspector
