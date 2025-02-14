@@ -115,14 +115,6 @@ class ClassificationEvaluator:
             for split_sr, y_true, y_pred in args_lt}
         for split_sr, y_true, y_pred in args_lt: print(f'{split_sr}:', snmes.classification_report(y_true=y_true, y_pred=y_pred), sep='\n')
         return self
-    
-# =============================================================================
-# get_cross_entropy
-# =============================================================================
-    
-def get_cross_entropy(y_trues, y_pred_probas):
-    eps_ft = np.finfo(dtype=y_pred_probas.iloc[:, 0].dtype).eps
-    return -(y_trues * y_pred_probas.clip(lower=eps_ft, upper=1 - eps_ft).apply(func=np.log)).sum(axis=1)
 
 # =============================================================================
 # RegressionEvaluator
@@ -182,14 +174,6 @@ class RegressionEvaluator:
             split_sr: self._get_eval_metrics(X=X, y=y) 
             for split_sr, X, y in [('train', X_train, self.y_train), ('test', X_test, self.y_test)]}
         return steda.get_differences(df=pd.DataFrame(data=eval_metrics_dt), columns_lt=['train', 'test'])
-    
-# =============================================================================
-# set_titles
-# =============================================================================
-
-def set_titles(axes):
-    for index_it, title_sr in enumerate(iterable=['train', 'test']): axes[index_it].set(title=title_sr)
-    return axes
  
 # =============================================================================
 # ThresholdEvaluator
@@ -239,3 +223,19 @@ class ThresholdEvaluator:
         .rename(index=lambda x: round(number=x, ndigits=3))
         .pipe(func=lambda x: x.iloc[::x.shape[0] // int(2e1), :])
         .plot(kind='bar', stacked=True))
+    
+# =============================================================================
+# get_cross_entropy
+# =============================================================================
+    
+def get_cross_entropy(y_trues, y_pred_probas):
+    eps_ft = np.finfo(dtype=y_pred_probas.iloc[:, 0].dtype).eps
+    return -(y_trues * y_pred_probas.clip(lower=eps_ft, upper=1 - eps_ft).apply(func=np.log)).sum(axis=1)
+
+# =============================================================================
+# set_titles
+# =============================================================================
+
+def set_titles(axes):
+    for index_it, title_sr in enumerate(iterable=['train', 'test']): axes[index_it].set(title=title_sr)
+    return axes
