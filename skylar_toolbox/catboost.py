@@ -113,6 +113,70 @@ class CatBoostRegressor(cb.CatBoostRegressor):
         return super().fit(X=X, y=y, **kwargs)
     
 # =============================================================================
+# MonoForestInspector
+# =============================================================================
+
+class MonoForestInspector:
+    def __init__(self, cbm): self.cbm = cbm
+    def fit(self):
+        # Get polynomials list
+        polynom_lt = cbmf.to_polynom(model=self.cbm)
+        # Get it as data frame
+        self.polynom_df = (
+            pd.DataFrame(data=list(map(lambda x: x.__dict__, polynom_lt)))
+            .assign(value = lambda x: x['value'].apply(func=lambda x: x[0])))
+        # Get splits
+        splits_dt = (
+            self.polynom_df['splits']
+            .apply(func=pd.Series)
+            .stack()
+            .apply(func=lambda x: x.__dict__)
+            .to_dict())
+        # Get them as data frame
+        self.features_dt = {
+            index_it: feature_sr 
+            for index_it, feature_sr in enumerate(iterable=self.cbm.feature_names_)}
+        self.splits_df = (
+            pd.DataFrame(data=splits_dt)
+            .T
+            .assign(feature_idx = lambda x: x['feature_idx'].map(arg=self.features_dt)))
+        return self
+    def plot_weight(self):
+        weight_ss = self.polynom_df['weight']
+        ax = weight_ss.sort_values(ascending=False).reset_index(drop=True).plot()
+        ax.axhline(c='k', ls=':')
+        data_ss = weight_ss.describe().round(decimals=3)
+        pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 2.5e-1, 1])
+        return ax.figure
+
+# =============================================================================
+# ValidationChangeCallback
+# =============================================================================
+
+class ValidationChangeCallback:
+    def __init__(self, metric_sr, threshold_ft=1e-4): self.metric_sr, self.threshold_ft = metric_sr, threshold_ft
+    def after_iteration(self, info):
+        try:
+            first_ft, second_ft = map(lambda x: info.metrics['validation'][self.metric_sr][x], [-2, -1])
+            change_ft = abs(second_ft - first_ft)
+            continue_bl = change_ft > self.threshold_ft
+        except Exception as en: continue_bl = True
+        return continue_bl
+
+# =============================================================================
+# ValidationDifferenceCallback
+# =============================================================================
+
+class ValidationDifferenceCallback:
+    def __init__(self, metric_sr, threshold_ft=1e-2): self.metric_sr, self.threshold_ft = metric_sr, threshold_ft
+    def after_iteration(self, info):
+        learn_metric_ft = info.metrics['learn'][self.metric_sr][-1]
+        validation_metric_ft = info.metrics['validation'][self.metric_sr][-1]
+        difference_ft = abs(validation_metric_ft - learn_metric_ft)
+        continue_bl = difference_ft < self.threshold_ft
+        return continue_bl
+
+# =============================================================================
 # get_default_params
 # =============================================================================
    
@@ -149,42 +213,6 @@ def get_selected_features(select_features_dt):
         min_loss_ft=min_loss_ft, optimal_eliminated_features_ss=optimal_eliminated_features_ss,
         optimal_eliminated_features_ix=optimal_eliminated_features_ix, optimal_selected_features_ix=optimal_selected_features_ix)
 
-# =============================================================================
-# MonoForestInspector
-# =============================================================================
-
-class MonoForestInspector:
-    def __init__(self, cbm): self.cbm = cbm
-    def fit(self):
-        # Get polynomials list
-        polynom_lt = cbmf.to_polynom(model=self.cbm)
-        # Get it as data frame
-        self.polynom_df = (
-            pd.DataFrame(data=list(map(lambda x: x.__dict__, polynom_lt)))
-            .assign(value = lambda x: x['value'].apply(func=lambda x: x[0])))
-        # Get splits
-        splits_dt = (
-            self.polynom_df['splits']
-            .apply(func=pd.Series)
-            .stack()
-            .apply(func=lambda x: x.__dict__)
-            .to_dict())
-        # Get them as data frame
-        self.features_dt = {
-            index_it: feature_sr 
-            for index_it, feature_sr in enumerate(iterable=self.cbm.feature_names_)}
-        self.splits_df = (
-            pd.DataFrame(data=splits_dt)
-            .T
-            .assign(feature_idx = lambda x: x['feature_idx'].map(arg=self.features_dt)))
-        return self
-    def plot_weight(self):
-        weight_ss = self.polynom_df['weight']
-        ax = weight_ss.sort_values(ascending=False).reset_index(drop=True).plot()
-        ax.axhline(c='k', ls=':')
-        data_ss = weight_ss.describe().round(decimals=3)
-        pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 2.5e-1, 1])
-        return ax.figure
     
 # =============================================================================
 # plot_evals_result
@@ -225,30 +253,3 @@ def update_params(params_dt, X):
     # Update
     params_dt.update(cat_features=new_cat_features_lt, monotone_constraints=new_monotone_constraints_dt)
     return params_dt
-
-# =============================================================================
-# ValidationChangeCallback
-# =============================================================================
-
-class ValidationChangeCallback:
-    def __init__(self, metric_sr, threshold_ft=1e-4): self.metric_sr, self.threshold_ft = metric_sr, threshold_ft
-    def after_iteration(self, info):
-        try:
-            first_ft, second_ft = map(lambda x: info.metrics['validation'][self.metric_sr][x], [-2, -1])
-            change_ft = abs(second_ft - first_ft)
-            continue_bl = change_ft > self.threshold_ft
-        except Exception as en: continue_bl = True
-        return continue_bl
-
-# =============================================================================
-# ValidationDifferenceCallback
-# =============================================================================
-
-class ValidationDifferenceCallback:
-    def __init__(self, metric_sr, threshold_ft=1e-2): self.metric_sr, self.threshold_ft = metric_sr, threshold_ft
-    def after_iteration(self, info):
-        learn_metric_ft = info.metrics['learn'][self.metric_sr][-1]
-        validation_metric_ft = info.metrics['validation'][self.metric_sr][-1]
-        difference_ft = abs(validation_metric_ft - learn_metric_ft)
-        continue_bl = difference_ft < self.threshold_ft
-        return continue_bl
