@@ -118,8 +118,6 @@ class CatBoostRegressor(cb.CatBoostRegressor):
    
 def get_default_params(): return dict(
     early_stopping_rounds=int(1e1),
-    eval_fraction=2e-1,
-    learning_rate=3e-2,
     use_best_model=True,
     verbose=int(1e2))
 
