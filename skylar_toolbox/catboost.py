@@ -56,7 +56,7 @@ class CatBoostInspector:
             columns=['first_feature', 'second_feature', 'interactions'])
         self.interactions_df = interactions_df.apply(func=lambda x: x.map(arg=features_dt) if x.name != 'interactions' else x)
         return self
-    def plot_eval_metrics(self, last_bl):
+    def plot_eval_metrics(self, last_bl=False):
         if last_bl:
             eval_metrics_ss = self.eval_metrics_df.iloc[-1, :].sort_values().rename(index='metrics')
             ax = eval_metrics_ss.plot(kind='barh')
@@ -79,12 +79,11 @@ class CatBoostInspector:
             data_ss = self.feature_importances_df[column_sr].describe().round(decimals=3)
             pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 2.5e-1, 1])
         return plt.gcf()
-    def plot_top_feature_importances(self, nlargest_n_it=int(1e1), nlargest_columns_lt=['LossFunctionChange']): return (
-        self.feature_importances_df
-        .nlargest(n=nlargest_n_it, columns=nlargest_columns_lt)
-        [::-1]
-        .plot(kind='barh', subplots=True, layout=(1, -1), sharex=False, sharey=True, legend=False)
-        .get_figure())
+    def plot_top_feature_importances(self, nlargest_n_it=int(1e1), nlargest_columns_lt=['LossFunctionChange']): 
+        (self.feature_importances_df
+         .nlargest(n=nlargest_n_it, columns=nlargest_columns_lt)[::-1]
+         .plot(kind='barh', subplots=True, layout=(1, -1), sharex=False, sharey=True, legend=False))
+        return plt.gcf()
     def plot_interactions(self):
         interactions_ss = self.interactions_df['interactions']
         ax = interactions_ss.plot()
@@ -92,14 +91,12 @@ class CatBoostInspector:
         data_ss = interactions_ss.describe().round(decimals=3)
         pd.plotting.table(ax=ax, data=data_ss, bbox=[1.25, 0, 2.5e-1, 1])
         return ax.figure
-    def plot_top_interactions(self, nlargest_n_it=int(1e1)): return (
-        self.interactions_df
-        .set_index(keys=['first_feature', 'second_feature'])
-        .squeeze()
-        .nlargest(n=nlargest_n_it)
-        [::-1]
-        .plot(kind='barh')
-        .get_figure())
+    def plot_top_interactions(self, nlargest_n_it=int(1e1)): 
+        (self.interactions_df
+         .set_index(keys=['first_feature', 'second_feature'])
+         .squeeze()
+         .nlargest(n=nlargest_n_it)[::-1].plot(kind='barh'))
+        return plt.gcf()
     
 # =============================================================================
 # CatBoostRegressor
