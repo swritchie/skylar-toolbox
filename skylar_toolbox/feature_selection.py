@@ -37,3 +37,5 @@ class MulticollinearityMitigator(snbe.BaseEstimator, snbe.TransformerMixin):
             self.drop_lt.extend(list(feature_group_fs.difference([self.keep_lt[-1]])))
         return self
     def transform(self, X): return X.drop(columns=self.drop_lt)
+    def get_feature_names_out(self): pass
+    def set_output(self, transform=None): pass
