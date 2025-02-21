@@ -152,9 +152,9 @@ class RegressionEvaluator:
         ax = plot_df.plot(kind='bar')
         pd.plotting.table(ax=ax, data=data_df, bbox=[1.5, 0, 5e-1, 1])
         return ax.figure
-    def plot_prediction_error(self, kind_sr, from_predictions_dt=dict()):
+    def plot_prediction_error(self, from_predictions_dt=dict()):
         fig, axes = plt.subplots(ncols=2, sharey=True, figsize=(1e1, 5))
-        from_predictions_dt.update(kind=kind_sr, y_true=self.y_train, y_pred=self.y_train_pred, ax=axes[0])
+        from_predictions_dt.update(y_true=self.y_train, y_pred=self.y_train_pred, ax=axes[0])
         snmes.PredictionErrorDisplay.from_predictions(**from_predictions_dt)
         from_predictions_dt.update(y_true=self.y_test, y_pred=self.y_test_pred, ax=axes[1])
         snmes.PredictionErrorDisplay.from_predictions(**from_predictions_dt)
