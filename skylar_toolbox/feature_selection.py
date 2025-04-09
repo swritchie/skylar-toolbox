@@ -15,7 +15,7 @@ class ConstantDropper(snbe.BaseEstimator, snbe.TransformerMixin):
     def __init__(self): pass
     def fit(self, X, y=None):
         self.nunique_ss = X.nunique().sort_values()
-        self.constant_ix = nunique_ss.pipe(func=lambda x: x[x.lt(other=2)]).index.sort_values()
+        self.constant_ix = self.nunique_ss.pipe(func=lambda x: x[x.lt(other=2)]).index.sort_values()
         return self
     def transform(self, X): return X.drop(columns=self.constant_ix)
     def get_feature_names_out(): pass
