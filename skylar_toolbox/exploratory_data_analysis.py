@@ -2,8 +2,11 @@
 # Load libraries
 # =============================================================================
 
+import itertools
+import networkx as nx
 import numpy as np
 import pandas as pd
+import tqdm
 
 # =============================================================================
 # describe
@@ -26,6 +29,33 @@ def describe(df):
         df.isin(values=[-np.inf, np.inf]).sum().rename(index='cnt_inf'),
         numeric_description_df
     ], axis=1).sort_values(by=['dtypes', 'nunique'])
+
+# =============================================================================
+# get_correlated_groups
+# =============================================================================
+
+def get_correlated_groups(correlations_ss, thresholds_ay=np.arange(start=5e-2, stop=1.01, step=5e-2)):
+    correlated_groups_dt = {}
+    for threshold_ft in thresholds_ay:
+        filtered_correlations_df = (
+            correlations_ss
+            .abs()
+            .pipe(func=lambda x: x[x.ge(other=threshold_ft)])
+            .reset_index()
+            .set_axis(labels=['source', 'target', 'r'], axis=1))
+        gh = nx.from_pandas_edgelist(df=filtered_correlations_df, edge_attr='r')
+        correlated_groups_dt[round(number=threshold_ft, ndigits=3)] = list(nx.connected_components(G=gh))
+    return correlated_groups_dt
+
+# =============================================================================
+# get_correlations
+# =============================================================================
+
+def get_correlations(df, method_sr='spearman'):
+    correlations_dt = {}
+    for columns_te in tqdm.tqdm(iterable=sorted(itertools.combinations(iterable=df, r=2))):
+        correlations_dt[columns_te] = df[list(columns_te)].corr(method=method_sr).iloc[0, 1]
+    return pd.Series(data=correlations_dt, name=method_sr)
 
 # =============================================================================
 # get_differences
