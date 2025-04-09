@@ -29,7 +29,7 @@ class DuplicatedDropper(snbe.BaseEstimator, snbe.TransformerMixin):
     def fit(self, X, y=None):
         duplicated_lt = []
         for column_sr, column_sr2 in tqdm.tqdm(iterable=sorted(itertools.combinations(iterable=X.columns.sort_values(), r=2))):
-            if df[column_sr].equals(other=df[column_sr2]): duplicated_lt.append(column_sr2)
+            if X[column_sr].equals(other=X[column_sr2]): duplicated_lt.append(column_sr2)
         self.duplicated_ix = pd.Index(data=duplicated_lt).sort_values()
         return self
     def transform(self, X): return X.drop(columns=self.duplicated_ix)
