@@ -12,10 +12,13 @@ from sklearn import base as snbe
 # =============================================================================
 
 class ConstantDropper(snbe.BaseEstimator, snbe.TransformerMixin):
-    def __init__(self): pass
+    def __init__(self, dropna_bl=False, threshold_ft=1e0): self.dropna_bl, self.threshold_ft = dropna_bl, threshold_ft
     def fit(self, X, y=None):
-        self.nunique_ss = X.nunique().sort_values()
-        self.constant_ix = self.nunique_ss.pipe(func=lambda x: x[x.lt(other=2)]).index.sort_values()
+        self.value_counts_ss = (
+            X
+            .apply(func=lambda x: x.value_counts(dropna=self.dropna_bl, normalize=True).iloc[0])
+            .sort_values())
+        self.constant_ix = self.value_counts_ss.pipe(func=lambda x: x[x.ge(other=self.threshold_ft)]).index
         return self
     def transform(self, X): return X.drop(columns=self.constant_ix)
     def get_feature_names_out(): pass
