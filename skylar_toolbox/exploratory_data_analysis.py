@@ -13,24 +13,17 @@ import tqdm
 # =============================================================================
 
 def describe(df):
-    numeric_description_df = (
-        df
-        .describe()
-        .T
-        .assign(
-            iqr = lambda x: x['75%'] - x['25%'],
-            low_outlier_flag = lambda x: x['min'] < x['25%'] - 1.5 * x['iqr'],
-            high_outlier_flag = lambda x: x['max'] > x['75%'] + 1.5 * x['iqr']))
+    numeric_df = df.select_dtypes(include='number')
     return pd.concat(objs=[
         df.dtypes.astype(dtype=str).rename(index='dtypes'),
         df.nunique().rename(index='nunique'),
-        df.apply(func=lambda x: x.value_counts().nlargest().index.tolist()).rename(index='top_values'),
-        df.isna().mean().rename(index='pct_missing'),
-        df.lt(other=0).mean().rename(index='pct_negative'),
-        df.eq(other=0).mean().rename(index='pct_zero'),
+        df.apply(func=lambda x: x.value_counts(normalize=True).nlargest().round(decimals=3).to_dict()).rename(index='value_counts'),
         df.isin(values=[-np.inf, np.inf]).sum().rename(index='cnt_inf'),
-        numeric_description_df
-    ], axis=1).sort_values(by=['dtypes', 'nunique'])
+        df.isna().mean().rename(index='pct_missing'),
+        numeric_df.lt(other=0).mean().rename(index='pct_negative'),
+        numeric_df.eq(other=0).mean().rename(index='pct_zero'),
+        df.describe().T.drop(columns='count')
+    ], axis=1).sort_values(by=['dtypes', 'nunique']).round(decimals=3)
 
 # =============================================================================
 # get_correlated_groups
