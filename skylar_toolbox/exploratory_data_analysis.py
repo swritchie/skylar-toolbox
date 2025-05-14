@@ -12,17 +12,15 @@ import tqdm
 # describe
 # =============================================================================
 
-def describe(df):
-    numeric_df = df.select_dtypes(include='number')
-    return pd.concat(objs=[
-        df.dtypes.astype(dtype=str).rename(index='dtypes'),
-        df.nunique().rename(index='nunique'),
-        df.apply(func=lambda x: x.value_counts(normalize=True).nlargest().round(decimals=3).to_dict()).rename(index='value_counts'),
-        df.isin(values=[-np.inf, np.inf]).sum().rename(index='cnt_inf'),
-        df.isna().mean().rename(index='pct_missing'),
-        numeric_df.lt(other=0).mean().rename(index='pct_negative'),
-        numeric_df.eq(other=0).mean().rename(index='pct_zero'),
-        df.describe().T.drop(columns='count')
+def describe(df): return pd.concat(objs=[
+    df.dtypes.astype(dtype=str).rename(index='dtypes'),
+    df.nunique().rename(index='nunique'),
+    df.apply(func=lambda x: x.value_counts(normalize=True).nlargest().round(decimals=3).to_dict()).rename(index='value_counts'),
+    df.isin(values=[-np.inf, np.inf]).sum().rename(index='cnt_inf'),
+    df.isna().mean().rename(index='pct_missing'),
+    df.select_dtypes(include='number').lt(other=0).mean().rename(index='pct_negative'),
+    df.eq(other=0).mean().rename(index='pct_zero'),
+    df.describe().T.drop(columns='count')
     ], axis=1).sort_values(by=['dtypes', 'nunique']).round(decimals=3)
 
 # =============================================================================
