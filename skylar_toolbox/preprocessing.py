@@ -7,6 +7,9 @@ import pandas as pd
 from sklearn import base as snbe
 from sklearn import feature_selection as snfs
 
+try: import lifelines
+except Exception as en: print(en.__class__, en)
+
 # =============================================================================
 # AggregationEngineer
 # =============================================================================
@@ -45,6 +48,23 @@ class AggregationEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
         return X
     def get_feature_names_out(): pass
     def plot(self): return self.mutual_info_ss.plot(kind='barh')
+
+# =============================================================================
+# DurationCalculator
+# =============================================================================
+
+class DurationCalculator(snbe.BaseEstimator, snbe.TransformerMixin):
+    def __init__(self, start_sr, end_sr, datetimes_to_durations_dt=dict()): 
+        self.start_sr, self.end_sr, self.datetimes_to_durations_dt = start_sr, end_sr, datetimes_to_durations_dt
+        self.duration_sr = f'time_from_{start_sr}_to_{end_sr}'
+        self.flag_sr = f'{end_sr}_flag'
+    def fit(self, X, y=None): return self
+    def transform(self, X):
+        durations_te = lifelines.utils.datetimes_to_durations(
+            start_times=X[self.start_sr], end_times=X[self.end_sr], **self.datetimes_to_durations_dt)
+        durations_df = pd.DataFrame(data=dict(zip([self.duration_sr, self.flag_sr], durations_te)), index=X.index)
+        return X.join(other=durations_df, how='left', validate='one_to_one')
+    def get_feature_names_out(): pass
 
 # =============================================================================
 # InteractionEngineer
