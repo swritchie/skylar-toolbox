@@ -5,6 +5,17 @@
 import datetime
 
 # =============================================================================
+# print_filtered_dir
+# =============================================================================
+
+def print_filtered_dir(item):
+    name_sr = item.__name__
+    filtered_dir_lt = sorted(filter(lambda x: not x.startswith('_'), dir(item)))
+    types_lt = list(map(lambda x: type(getattr(item, x)).__name__, filtered_dir_lt))
+    sequence_lt = list(map(' - '.join, zip(filtered_dir_lt, types_lt)))
+    print_sequence(name_sr=name_sr, sequence=sequence_lt)
+
+# =============================================================================
 # print_sequence
 # =============================================================================
 
@@ -14,6 +25,14 @@ def print_sequence(name_sr, sequence):
     sequence_sr = '\n'.join(f'{index_it:0{len_len_it}d}. {element}' for index_it, element in enumerate(iterable=sequence))
     print(f'{name_sr} ({len_it}):\n{sequence_sr}')
     
+# =============================================================================
+# print_shapes
+# =============================================================================
+
+def print_shapes(sequence, **print_kwargs): print(
+    *map(lambda x: x.shape if hasattr(x, 'shape') else len(x), sequence), 
+    **print_kwargs)
+
 # =============================================================================
 # time_callable
 # =============================================================================
