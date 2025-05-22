@@ -26,6 +26,14 @@ def print_sequence(name_sr, sequence):
     print(f'{name_sr} ({len_it}):\n{sequence_sr}')
     
 # =============================================================================
+# print_shapes
+# =============================================================================
+
+def print_shapes(sequence, **print_kwargs): print(
+    *map(lambda x: x.shape if hasattr(x, 'shape') else len(x), sequence), 
+    **print_kwargs)
+
+# =============================================================================
 # time_callable
 # =============================================================================
 
