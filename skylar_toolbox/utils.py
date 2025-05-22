@@ -3,17 +3,23 @@
 # =============================================================================
 
 import datetime
+import pandas as pd
 
 # =============================================================================
-# print_filtered_dir
+# filter_dir
 # =============================================================================
 
-def print_filtered_dir(item):
-    name_sr = item.__name__
-    filtered_dir_lt = sorted(filter(lambda x: not x.startswith('_'), dir(item)))
-    types_lt = list(map(lambda x: type(getattr(item, x)).__name__, filtered_dir_lt))
-    sequence_lt = list(map(' - '.join, zip(filtered_dir_lt, types_lt)))
-    print_sequence(name_sr=name_sr, sequence=sequence_lt)
+def filter_dir(item, dunder_flag_bl=False, under_flag_bl=False, module_flag_bl=False): return (
+    pd.Series(data=dir(item))
+    .to_frame(name='object')
+    .assign(**{
+        'dunder_flag': lambda x: x['object'].str.startswith(pat='__'),
+        'under_flag': lambda x: x['object'].str.startswith(pat='_'),
+        'type': lambda x: x['object'].apply(func=lambda y: type(getattr(item, y)).__name__),
+        'module_flag': lambda x: x['type'].eq(other='module')})
+    .query(expr=f'dunder_flag.eq(other={dunder_flag_bl})')
+    .query(expr=f'under_flag.eq(other={under_flag_bl})')
+    .query(expr=f'module_flag.eq(other={module_flag_bl})'))
 
 # =============================================================================
 # print_sequence
