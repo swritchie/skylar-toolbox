@@ -23,10 +23,10 @@ def filter_dir(item, under_flag_bl=False, module_flag_bl=False): return (
 # print_sequence
 # =============================================================================
 
-def print_sequence(name_sr, sequence):
+def print_sequence(sequence, name_sr='Sequence'):
     len_it = len(sequence)
     len_len_it = len(str(len_it))
-    sequence_sr = '\n'.join(f'{index_it:0{len_len_it}d}. {element}' for index_it, element in enumerate(iterable=sequence))
+    sequence_sr = '\n'.join(map(lambda x: f'{x[0]:0{len_len_it}d}. {x[1]}', enumerate(iterable=sequence)))
     print(f'{name_sr} ({len_it}):\n{sequence_sr}')
     
 # =============================================================================
