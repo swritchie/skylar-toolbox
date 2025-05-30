@@ -2,13 +2,11 @@
 # Load libraries
 # =============================================================================
 
+import lifelines
 import numpy as np
 import pandas as pd
 from sklearn import base as snbe
 from sklearn import feature_selection as snfs
-
-try: import lifelines
-except Exception as en: print(en.__class__, en)
 
 # =============================================================================
 # AggregationEngineer
