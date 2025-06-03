@@ -1,5 +1,5 @@
 To install, run the following: 
 
 ```
-pip install git+https://github.com/swritchie/skylar-toolbox.git
+pip install -q "skylar-toolbox @ git+https://github.com/swritchie/skylar-toolbox.git"
 ```
