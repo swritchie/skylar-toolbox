@@ -39,7 +39,16 @@ def get_correlated_groups(correlations_ss, thresholds_ay=np.arange(start=1e-2, s
             .set_axis(labels=['source', 'target', 'r'], axis=1))
         gh = nx.from_pandas_edgelist(df=filtered_correlations_df, edge_attr='r')
         correlated_groups_dt[round(number=threshold_ft, ndigits=3)] = list(nx.connected_components(G=gh))
-    return pd.Series(data=correlated_groups_dt, name='groups').drop_duplicates()
+    return (pd.Series(data=correlated_groups_dt, name='groups')
+        .drop_duplicates()
+        .to_frame()
+        .assign(**{
+            'n_groups': lambda x: x['groups'].apply(func=len),
+            'group_sizes': lambda x: x['groups'].apply(func=lambda x: list(map(len, x))),
+            'min_group_sizes': lambda x: x['group_sizes'].apply(func=min),
+            'max_group_sizes': lambda x: x['group_sizes'].apply(func=max),
+            'total_group_sizes': lambda x: x['group_sizes'].apply(func=sum),
+            'n_features_dropped': lambda x: x['total_group_sizes'].sub(other=x['n_groups'])}))
 
 # =============================================================================
 # get_correlations
