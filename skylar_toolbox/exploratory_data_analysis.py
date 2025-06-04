@@ -71,6 +71,19 @@ def plot_histogram(ss, hist_bins_it=int(3e1), table_bbox_lt=[1.25, 0, 2.5e-1, 1]
     return ax
 
 # =============================================================================
+# plot_largest_barh 
+# =============================================================================
+
+def plot_largest_barh(ss, n_it=int(1e1), signed_bl=True, bbox_lt=[1.25, 0, 2.5e-1, 1]):
+    largest_unsigned_ss = ss.abs().nlargest(n=n_it)[::-1]
+    largest_signed_ss = ss.loc[largest_unsigned_ss.index].sort_values()
+    plot_ss = largest_signed_ss if signed_bl else largest_unsigned_ss
+    ax = plot_ss.plot(kind='barh')
+    data_ss = plot_ss.reset_index(drop=True).round(decimals=3)[::-1]
+    pd.plotting.table(ax=ax, data=data_ss, bbox=bbox_lt)
+    return ax
+
+# =============================================================================
 # plot_time_series
 # =============================================================================
 
