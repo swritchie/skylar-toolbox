@@ -28,7 +28,7 @@ def describe(df): return pd.concat(objs=[
 # get_correlated_groups
 # =============================================================================
 
-def get_correlated_groups(correlations_ss, thresholds_ay=np.arange(start=5e-2, stop=1.01, step=5e-2)):
+def get_correlated_groups(correlations_ss, thresholds_ay=np.arange(start=1e-2, stop=1e0, step=1e-2)):
     correlated_groups_dt = {}
     for threshold_ft in thresholds_ay:
         filtered_correlations_df = (
@@ -39,7 +39,7 @@ def get_correlated_groups(correlations_ss, thresholds_ay=np.arange(start=5e-2, s
             .set_axis(labels=['source', 'target', 'r'], axis=1))
         gh = nx.from_pandas_edgelist(df=filtered_correlations_df, edge_attr='r')
         correlated_groups_dt[round(number=threshold_ft, ndigits=3)] = list(nx.connected_components(G=gh))
-    return correlated_groups_dt
+    return pd.Series(data=correlated_groups_dt, name='groups').drop_duplicates()
 
 # =============================================================================
 # get_correlations
@@ -68,6 +68,19 @@ def plot_histogram(ss, hist_bins_it=int(3e1), table_bbox_lt=[1.25, 0, 2.5e-1, 1]
     ax = ss.hist(bins=hist_bins_it)
     data_ss = ss.describe().round(decimals=3)
     pd.plotting.table(ax=ax, data=data_ss, bbox=table_bbox_lt)
+    return ax
+
+# =============================================================================
+# plot_largest_barh 
+# =============================================================================
+
+def plot_largest_barh(ss, n_it=int(1e1), signed_bl=True, bbox_lt=[1.25, 0, 2.5e-1, 1]):
+    largest_unsigned_ss = ss.abs().nlargest(n=n_it)[::-1]
+    largest_signed_ss = ss.loc[largest_unsigned_ss.index].sort_values()
+    plot_ss = largest_signed_ss if signed_bl else largest_unsigned_ss
+    ax = plot_ss.plot(kind='barh')
+    data_ss = plot_ss.reset_index(drop=True).round(decimals=3)[::-1]
+    pd.plotting.table(ax=ax, data=data_ss, bbox=bbox_lt)
     return ax
 
 # =============================================================================
