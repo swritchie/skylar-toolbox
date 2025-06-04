@@ -6,6 +6,7 @@ import itertools
 import pandas as pd
 import tqdm
 from sklearn import base as snbe
+from skylar_toolbox import utils as stus
 
 # =============================================================================
 # ConstantDropper
@@ -37,3 +38,17 @@ class DuplicatedDropper(snbe.BaseEstimator, snbe.TransformerMixin):
         return self
     def transform(self, X): return X.drop(columns=self.duplicated_ix)
     def get_feature_names_out(): pass
+
+# =============================================================================
+# get_correlated_features_to_drop
+# =============================================================================
+
+def get_correlated_features_to_drop(correlated_groups_lt, scores_ss, lower_is_better_bl):
+    drop_lt = []
+    for correlated_group_st in correlated_groups_lt:
+        correlated_scores_ss = scores_ss.loc[list(correlated_group_st)]
+        best_sr = correlated_scores_ss.idxmin() if lower_is_better_bl else correlated_scores_ss.idxmax()
+        rest_st = correlated_group_st.difference([best_sr])
+        drop_lt.extend(list(rest_st))
+        stus.print_shapes(sequence=[correlated_group_st, rest_st, drop_lt], sep=' -> ')
+    return drop_lt
