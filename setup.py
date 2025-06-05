@@ -11,5 +11,5 @@ setuptools.setup(
         'catboost': ['catboost'],
         'networkx': ['networkx'],
         'optuna': ['optuna'],
-        'preprocessing': ['lifelines'],
+        'lifelines': ['lifelines'],
         'complete': ['catboost', 'lifelines', 'networkx', 'optuna']})
