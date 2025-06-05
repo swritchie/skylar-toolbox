@@ -35,9 +35,9 @@ class DurationCalculator(snbe.BaseEstimator, snbe.TransformerMixin):
 
 def plot_feature(
     feature_ss, duration_ss, event_flag_ss,
-    Fitter=lifelines.KaplanMeierFitter, init_dt={}, fit_dt={}, plot_dt={}, add_at_risk_counts_dt={}):
+    ax=None, Fitter=lifelines.KaplanMeierFitter, init_dt={}, fit_dt={}, plot_dt={}, add_at_risk_counts_dt={}):
     fitters_lt = []
-    ax = plt.subplot(1, 1, 1)
+    ax = ax if ax else plt.subplot(1, 1, 1)
     for value in feature_ss.drop_duplicates().sort_values():
         # Filter
         filtered_feature_ss = feature_ss.pipe(func=lambda x: x[x.eq(other=value)])
