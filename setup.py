@@ -9,7 +9,7 @@ setuptools.setup(
     install_requires=['scikit-learn', 'seaborn', 'tqdm'],
     extras_require={
         'catboost': ['catboost'],
-        'exploratory_data_analysis': ['networkx'],
+        'networkx': ['networkx'],
         'optuna': ['optuna'],
         'preprocessing': ['lifelines'],
         'complete': ['catboost', 'lifelines', 'networkx', 'optuna']})
