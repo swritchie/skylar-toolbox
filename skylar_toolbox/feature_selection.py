@@ -15,8 +15,7 @@ from skylar_toolbox import utils as stus
 class ConstantDropper(snbe.BaseEstimator, snbe.TransformerMixin):
     def __init__(self, dropna_bl=False, threshold_ft=1e0): self.dropna_bl, self.threshold_ft = dropna_bl, threshold_ft
     def fit(self, X, y=None):
-        self.value_counts_ss = (
-            X
+        self.value_counts_ss = (X
             .apply(func=lambda x: x.value_counts(dropna=self.dropna_bl, normalize=True).iloc[0])
             .sort_values())
         self.constant_ix = self.value_counts_ss.pipe(func=lambda x: x[x.ge(other=self.threshold_ft)]).index

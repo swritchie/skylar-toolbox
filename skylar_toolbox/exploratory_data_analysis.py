@@ -70,8 +70,7 @@ def plot_largest_barh(ss, n_it=int(1e1), signed_bl=True, bbox_lt=[1.25, 0, 2.5e-
 # =============================================================================
 
 def plot_time_series(datetime_ss, other_ss, resample_rule_sr, table_bbox_lt=[1.25, 0, 2.5e-1, 1]):
-    plot_ss = (
-        pd.concat(objs=[datetime_ss, other_ss], axis=1)
+    plot_ss = (pd.concat(objs=[datetime_ss, other_ss], axis=1)
         .set_index(keys=datetime_ss.name)
         .resample(rule=resample_rule_sr)
         .mean()
@@ -87,8 +86,7 @@ def plot_time_series(datetime_ss, other_ss, resample_rule_sr, table_bbox_lt=[1.2
 # =============================================================================
 
 def plot_value_counts(ss, nlargest_n_it=int(1e1), plot_kind_sr='barh', table_bbox_lt=None):
-    value_counts_df = (
-        ss
+    value_counts_df = (ss
         .value_counts(dropna=False)
         .to_frame(name='cnt')
         .assign(pct = lambda x: x['cnt'] / x['cnt'].sum()))

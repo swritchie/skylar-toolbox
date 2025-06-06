@@ -13,8 +13,7 @@ import pandas as pd
 def get_correlated_groups(correlations_ss, thresholds_ay=np.arange(start=1e-2, stop=1e0, step=1e-2)):
     correlated_groups_dt = {}
     for threshold_ft in thresholds_ay:
-        filtered_correlations_df = (
-            correlations_ss
+        filtered_correlations_df = (correlations_ss
             .abs()
             .pipe(func=lambda x: x[x.ge(other=threshold_ft)])
             .reset_index()

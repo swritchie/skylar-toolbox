@@ -216,8 +216,7 @@ class ThresholdEvaluator:
             ss.pipe(func=lambda x: ax.axvline(x=x.idxmax(), c=f'C{index_it}', ls='--'))
         ax.axhline(c='k', ls=':')
         return ax
-    def plot_counts(self): return (
-        self.thresholded_metrics_df
+    def plot_counts(self): return (self.thresholded_metrics_df
         .select_dtypes(include=int)
         .sort_index()
         .rename(index=lambda x: round(number=x, ndigits=3))

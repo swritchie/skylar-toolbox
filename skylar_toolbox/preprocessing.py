@@ -70,8 +70,7 @@ class InteractionEngineer(snbe.BaseEstimator, snbe.TransformerMixin):
         self.mutual_info_ss = (
             pd.Series(data=mutual_info_fn(X=X_subset, y=y, **self.fit_dt), index=X_subset.columns, name='mutual_info')
             .sort_values())
-        self.best_sr = (
-            self.mutual_info_ss
+        self.best_sr = (self.mutual_info_ss
             .drop(labels=[self.feature_sr, self.feature_sr2])
             .nlargest(n=1)
             .index[0])

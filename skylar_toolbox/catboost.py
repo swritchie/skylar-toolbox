@@ -119,22 +119,17 @@ class MonoForestInspector:
         # Get polynomials list
         polynom_lt = cbmf.to_polynom(model=self.cbm)
         # Get it as data frame
-        self.polynom_df = (
-            pd.DataFrame(data=list(map(lambda x: x.__dict__, polynom_lt)))
+        self.polynom_df = (pd.DataFrame(data=list(map(lambda x: x.__dict__, polynom_lt)))
             .assign(value = lambda x: x['value'].apply(func=lambda x: x[0])))
         # Get splits
-        splits_dt = (
-            self.polynom_df['splits']
+        splits_dt = (self.polynom_df['splits']
             .apply(func=pd.Series)
             .stack()
             .apply(func=lambda x: x.__dict__)
             .to_dict())
         # Get them as data frame
-        self.features_dt = {
-            index_it: feature_sr 
-            for index_it, feature_sr in enumerate(iterable=self.cbm.feature_names_)}
-        self.splits_df = (
-            pd.DataFrame(data=splits_dt)
+        self.features_dt = {index_it: feature_sr for index_it, feature_sr in enumerate(iterable=self.cbm.feature_names_)}
+        self.splits_df = (pd.DataFrame(data=splits_dt)
             .T
             .assign(feature_idx = lambda x: x['feature_idx'].map(arg=self.features_dt)))
         return self
@@ -207,8 +202,7 @@ def get_selected_features(select_features_dt):
 # =============================================================================
 
 def plot_evals_result(evals_result_df):
-    metrics_ix = (
-        evals_result_df.columns
+    metrics_ix = (evals_result_df.columns
         .get_level_values(level=0)
         .drop_duplicates())
     fig, axes = plt.subplots(
@@ -228,8 +222,7 @@ def plot_evals_result(evals_result_df):
 def update_params(params_dt, X):
     # Get cat features
     old_cat_features_lt = params_dt.get('cat_features', [])
-    new_cat_features_lt = (
-        X.columns
+    new_cat_features_lt = (X.columns
         .intersection(other=old_cat_features_lt)              # May have been dropped
         .union(other=X.select_dtypes(include=object).columns) # May have been added
         .tolist())
