@@ -4,6 +4,7 @@
 
 import numpy as np
 import pandas as pd
+import seaborn as sns; sns.set()
 from matplotlib import pyplot as plt
 from sksurv import metrics as ssmes
 from skylar_toolbox import exploratory_data_analysis as steda
