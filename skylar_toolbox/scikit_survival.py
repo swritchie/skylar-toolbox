@@ -93,7 +93,7 @@ class SurvivalModelEvaluator:
         ax3.plot(self.times_ay, values_ss[self.s_predictions_sr], label='predicted')
         ax3.axvline(x=values_ss[self.duration_sr], c=c_sr, label='actual')
         ax3.legend()
-        ax3.set(xlabel=self.time_sr, ylabel=self.s_predictions_sr)
+        ax3.set(ylim=(0, 1), xlabel=self.time_sr, ylabel=self.s_predictions_sr)
         fig.tight_layout()
         return fig
     def plot_eval_metrics(self):
