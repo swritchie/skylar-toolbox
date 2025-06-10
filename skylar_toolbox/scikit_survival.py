@@ -62,13 +62,16 @@ class SurvivalModelEvaluator:
         return plt.gcf()
     def plot_sample_cumulative_hazard_predictions(self, sample_dt=dict(frac=1e-2), plot_dt=dict(alpha=1e-2)):
         ax = plt.subplot(1, 1, 1)
+        ax.axhline(c='k')
         self.y_combined[self.ch_predictions_sr].sample(**sample_dt).apply(func=lambda x: ax.plot(self.times_ay, x, **plot_dt))
-        ax.set(xlabel=self.time_sr, ylabel=self.ch_predictions_sr)
+        ax.set(ylim=(-1e-2, None), xlabel=self.time_sr, ylabel=self.ch_predictions_sr)
         return plt.gcf()
     def plot_sample_survival_predictions(self, sample_dt=dict(frac=1e-2), plot_dt=dict(alpha=1e-2)):
         ax = plt.subplot(1, 1, 1)
+        ax.axhline(c='k')
+        ax.axhline(y=5e-1, c='k', ls=':')
         self.y_combined[self.s_predictions_sr].sample(**sample_dt).apply(func=lambda x: ax.plot(self.times_ay, x, **plot_dt))
-        ax.set(xlabel=self.time_sr, ylabel=self.s_predictions_sr)
+        ax.set(ylim=(-1e-2, None), xlabel=self.time_sr, ylabel=self.s_predictions_sr)
         return plt.gcf()
     def plot_sample_prediction(self, index):
         # Get sample data
@@ -84,17 +87,20 @@ class SurvivalModelEvaluator:
         ax.set(xlabel=self.predictions_sr, title='time-independent risk scores')
         # Plot cumulative hazard predictions alongside actuals
         ax2 = fig.add_subplot(gs[0, 1])
+        ax2.axhline(c='k')
         ax2.plot(self.times_ay, values_ss[self.ch_predictions_sr], label='predicted')
         c_sr = 'r' if values_ss[self.event_flag_sr] else 'g'
         ax2.axvline(x=values_ss[self.duration_sr], c=c_sr, label='actual')
         ax2.legend()
-        ax2.set(ylabel=self.ch_predictions_sr, title='time-dependent risk scores')
+        ax2.set(ylim=(-1e-2, None), ylabel=self.ch_predictions_sr, title='time-dependent risk scores')
         # Plot survival predictions alongside actuals
         ax3 = fig.add_subplot(gs[1, 1], sharex=ax2)
+        ax3.axhline(c='k')
+        ax3.axhline(y=5e-1, c='k', ls=':')
         ax3.plot(self.times_ay, values_ss[self.s_predictions_sr], label='predicted')
         ax3.axvline(x=values_ss[self.duration_sr], c=c_sr, label='actual')
         ax3.legend()
-        ax3.set(ylim=(0, 1), xlabel=self.time_sr, ylabel=self.s_predictions_sr)
+        ax3.set(ylim=(-1e-2, None), xlabel=self.time_sr, ylabel=self.s_predictions_sr)
         fig.tight_layout()
         return fig
     def plot_eval_metrics(self):
