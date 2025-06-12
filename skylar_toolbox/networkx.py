@@ -22,6 +22,7 @@ def get_correlated_groups(correlations_ss, thresholds_ay=np.arange(start=1e-2, s
         correlated_groups_dt[round(number=threshold_ft, ndigits=3)] = list(nx.connected_components(G=gh))
     return (pd.Series(data=correlated_groups_dt, name='groups')
         .drop_duplicates()
+        .pipe(func=lambda x: x[x.apply(func=len).gt(other=0)])
         .to_frame()
         .assign(**{
             'n_groups': lambda x: x['groups'].apply(func=len),
