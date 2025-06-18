@@ -6,6 +6,24 @@ from matplotlib import pyplot as plt
 from optuna.visualization import matplotlib as oavnmb
 
 # =============================================================================
+# TrialsSinceBestCallback
+# =============================================================================
+
+class TrialsSinceBestCallback:
+    def __init__(self, burn_in_period_it, wait_period_it, weights_lt=None): 
+        self.burn_in_period_it, self.wait_period_it, self.weights_lt = \
+            burn_in_period_it, wait_period_it, weights_lt
+    def __call__(self, study, trial):
+        # Check whether burn-in has occurred
+        current_trial_number_it = trial.number
+        burned_in_bl = current_trial_number_it >= self.burn_in_period_it
+        # Check whether wait has expired
+        trials_df, best_trials_df = get_best_trial(study=study, weights_lt=self.weights_lt)
+        best_trial_number_it = best_trials_df.query(expr='best')['number'].squeeze()
+        waited_bl = current_trial_number_it - best_trial_number_it >= self.wait_period_it
+        if burned_in_bl and waited_bl: study.stop()
+
+# =============================================================================
 # get_best_trial
 # =============================================================================
 
