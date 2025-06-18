@@ -6,6 +6,29 @@ import datetime
 import pandas as pd
 
 # =============================================================================
+# DocFilter
+# =============================================================================
+
+class DocFilter:
+    def __init__(self, item): self.doc_sr = item.__doc__
+    def fit(self):
+        self.doc_ss = pd.Series(data=self.doc_sr.splitlines())
+        self.sections_df = (
+            self.doc_ss
+            .pipe(func=lambda x: x.loc[x.str.contains(pat='---').shift(periods=-1).ffill()])
+            .pipe(func=lambda x: pd.Series(data=x.index, index=x))
+            .rename(index=str.strip)
+            .to_frame(name='starts')
+            .assign(**{'stops': lambda x: x['starts'].shift(periods=-1)})
+            .fillna(value={'stops': self.doc_ss.index.max().__add__(1)})
+            .astype(dtype={'stops': int})
+            .pipe(func=lambda x: pd.concat(objs=[pd.DataFrame(data=[[0, x.iloc[0, 0]]], index=['Intro'], columns=x.columns), x])))
+        return self
+    def print(self, section_sr='Intro'):
+        if not section_sr: print(self.doc_sr)
+        print(self.doc_ss.iloc[slice(*self.sections_df.loc[section_sr, :])].str.cat(sep='\n'))
+
+# =============================================================================
 # filter_dir
 # =============================================================================
 
