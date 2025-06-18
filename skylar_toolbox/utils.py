@@ -26,7 +26,7 @@ class DocFilter:
         return self
     def print(self, section_sr='Intro'):
         if not section_sr: print(self.doc_sr)
-        print(self.doc_ss.iloc[slice(*self.sections_df.loc[section_sr, :])].str.cat(sep='\n'))
+        else: print(self.doc_ss.iloc[slice(*self.sections_df.loc[section_sr, :])].str.cat(sep='\n'))
 
 # =============================================================================
 # filter_dir
