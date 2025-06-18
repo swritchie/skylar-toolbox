@@ -6,6 +6,24 @@ from matplotlib import pyplot as plt
 from optuna.visualization import matplotlib as oavnmb
 
 # =============================================================================
+# TrialsSinceBestCallback
+# =============================================================================
+
+class TrialsSinceBestCallback:
+    def __init__(self, burn_in_period_it, wait_period_it, weights_lt=None): 
+        self.burn_in_period_it, self.wait_period_it, self.weights_lt = \
+            burn_in_period_it, wait_period_it, weights_lt
+    def __call__(self, study, trial):
+        # Check whether burn-in has occurred
+        current_trial_number_it = trial.number
+        burned_in_bl = current_trial_number_it >= self.burn_in_period_it
+        # Check whether wait has expired
+        trials_df, best_trials_df = get_best_trial(study=study, weights_lt=self.weights_lt)
+        best_trial_number_it = best_trials_df.query(expr='best')['number'].squeeze()
+        waited_bl = current_trial_number_it - best_trial_number_it >= self.wait_period_it
+        if burned_in_bl and waited_bl: study.stop()
+
+# =============================================================================
 # get_best_trial
 # =============================================================================
 
@@ -15,10 +33,15 @@ def get_best_trial(study, weights_lt=None):
     # Get best trial numbers
     best_trial_numbers_lt = list(map(lambda x: x.number, study.best_trials))
     # Sort, identify best trial, and filter
-    lower_is_better_dt = dict(map(lambda x: [f'values_{x[0]}', x[1].name == 'MINIMIZE'], enumerate(iterable=study.directions)))
+    n_objectives_it = len(study.directions)
+    lower_is_better_dt = dict(map(
+        lambda x: [f'values_{x[0]}' if n_objectives_it > 1 else 'value', x[1].name == 'MINIMIZE'],
+        enumerate(iterable=study.directions)))
     sort_sr = list(lower_is_better_dt.keys())[0]
-    ranks_dt = dict(map(lambda x: [f'{x[0]}_rank', lambda y: y[x[0]].rank(ascending=x[1], pct=True)], lower_is_better_dt.items()))
-    weights_lt = weights_lt if weights_lt else [1] * len(study.directions)
+    ranks_dt = dict(map(
+        lambda x: [f'{x[0]}_rank', lambda y: y[x[0]].rank(ascending=x[1], pct=True)],
+        lower_is_better_dt.items()))
+    weights_lt = weights_lt if weights_lt else [1] * n_objectives_it 
     ranks_dt.update(
         weighted_rank=lambda x: x.filter(like='_rank').dot(other=weights_lt), 
         best=lambda x: x['weighted_rank'].pipe(func=lambda y: y.eq(other=y.min())))
