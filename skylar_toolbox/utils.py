@@ -72,9 +72,8 @@ def print_sequence(sequence, name_sr='Sequence'):
 # print_shapes
 # =============================================================================
 
-def print_shapes(sequence, **print_kwargs): print(
-    *map(lambda x: x.shape if hasattr(x, 'shape') else len(x), sequence), 
-    **print_kwargs)
+def print_shapes(sequence, types_bl=False, **kwargs): 
+    print(*map(get_type_and_shape if types_bl else get_shape, sequence), **kwargs)
 
 # =============================================================================
 # time_callable
