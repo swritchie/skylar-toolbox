@@ -3,6 +3,7 @@
 # =============================================================================
 
 import datetime
+import numpy as np
 import pandas as pd
 
 # =============================================================================
@@ -41,6 +42,21 @@ def filter_dir(item, under_flag_bl=False, module_flag_bl=False): return (
         'module_flag': lambda x: x['type'].eq(other='module')})
     .query(expr=f'under_flag.eq(other={under_flag_bl})')
     .query(expr=f'module_flag.eq(other={module_flag_bl})'))
+
+# =============================================================================
+# get_shape 
+# =============================================================================
+
+def get_shape(item): 
+    if hasattr(item, 'shape'): return item.shape
+    elif hasattr(item, '__len__'): return len(item)
+    else: return np.nan
+
+# =============================================================================
+# get_type_and_shape 
+# =============================================================================
+
+def get_type_and_shape(item): return type(item), get_shape(item=item)
 
 # =============================================================================
 # print_sequence
