@@ -6,7 +6,7 @@ setuptools.setup(
     author='Skylar Ritchie',
     packages=['skylar_toolbox'],
     zip_safe=False,
-    install_requires=['scikit-learn', 'seaborn', 'tqdm'],
+    install_requires=['scikit-learn', 'seaborn', 'statsmodels', 'toolz', 'tqdm'],
     extras_require={
         'catboost': ['catboost'],
         'networkx': ['networkx'],
