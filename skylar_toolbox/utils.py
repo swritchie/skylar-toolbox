@@ -62,18 +62,18 @@ def get_type_and_shape(x): return type(x), get_shape(x=x)
 # print_sequence
 # =============================================================================
 
-def print_sequence(sequence, name_sr='Sequence'):
-    len_it = len(sequence)
+def print_sequence(x, name_sr='Sequence'):
+    len_it = len(x)
     len_len_it = len(str(len_it))
-    sequence_sr = '\n'.join(map(lambda x: f'{x[0]:0{len_len_it}d}. {x[1]}', enumerate(iterable=sequence)))
+    sequence_sr = '\n'.join(map(lambda x: f'{x[0]:0{len_len_it}d}. {x[1]}', enumerate(iterable=x)))
     print(f'{name_sr} ({len_it}):\n{sequence_sr}')
     
 # =============================================================================
 # print_shapes
 # =============================================================================
 
-def print_shapes(sequence, types_bl=False, **kwargs): 
-    print(*map(get_type_and_shape if types_bl else get_shape, sequence), **kwargs)
+def print_shapes(x, types_bl=False, **kwargs): 
+    print(*map(get_type_and_shape if types_bl else get_shape, x), **kwargs)
 
 # =============================================================================
 # time_callable
