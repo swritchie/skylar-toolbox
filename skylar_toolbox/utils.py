@@ -49,6 +49,7 @@ def filter_dir(x, under_flag_bl=False, module_flag_bl=False): return (
 
 def get_shape(x): 
     if hasattr(x, 'shape'): return x.shape
+    elif hasattr(x, 'size'): return x.size
     elif hasattr(x, '__len__'): return len(x)
     else: return np.nan
 
