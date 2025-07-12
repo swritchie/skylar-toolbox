@@ -37,9 +37,9 @@ def filter_dir(x, under_flag_bl=False, module_flag_bl=False): return (
     pd.Series(data=dir(x))
     .to_frame(name='object')
     .assign(**{
-        'under_flag': lambda x: x['object'].str.startswith(pat='_'),
-        'type': lambda x: x['object'].apply(func=lambda y: type(getattr(x, y)).__name__),
-        'module_flag': lambda x: x['type'].eq(other='module')})
+        'under_flag': lambda y: y['object'].str.startswith(pat='_'),
+        'type': lambda y: y['object'].apply(func=lambda z: type(getattr(x, z)).__name__),
+        'module_flag': lambda y: y['type'].eq(other='module')})
     .query(expr=f'under_flag.eq(other={under_flag_bl})')
     .query(expr=f'module_flag.eq(other={module_flag_bl})'))
 
