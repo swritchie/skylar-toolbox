@@ -11,7 +11,7 @@ import pandas as pd
 # =============================================================================
 
 class DocFilter:
-    def __init__(self, item): self.doc_sr = item.__doc__
+    def __init__(self, x): self.doc_sr = x.__doc__
     def fit(self):
         self.doc_ss = pd.Series(data=self.doc_sr.splitlines())
         self.sections_df = (
@@ -33,12 +33,12 @@ class DocFilter:
 # filter_dir
 # =============================================================================
 
-def filter_dir(item, under_flag_bl=False, module_flag_bl=False): return (
-    pd.Series(data=dir(item))
+def filter_dir(x, under_flag_bl=False, module_flag_bl=False): return (
+    pd.Series(data=dir(x))
     .to_frame(name='object')
     .assign(**{
         'under_flag': lambda x: x['object'].str.startswith(pat='_'),
-        'type': lambda x: x['object'].apply(func=lambda y: type(getattr(item, y)).__name__),
+        'type': lambda x: x['object'].apply(func=lambda y: type(getattr(x, y)).__name__),
         'module_flag': lambda x: x['type'].eq(other='module')})
     .query(expr=f'under_flag.eq(other={under_flag_bl})')
     .query(expr=f'module_flag.eq(other={module_flag_bl})'))
@@ -47,16 +47,16 @@ def filter_dir(item, under_flag_bl=False, module_flag_bl=False): return (
 # get_shape 
 # =============================================================================
 
-def get_shape(item): 
-    if hasattr(item, 'shape'): return item.shape
-    elif hasattr(item, '__len__'): return len(item)
+def get_shape(x): 
+    if hasattr(x, 'shape'): return x.shape
+    elif hasattr(x, '__len__'): return len(x)
     else: return np.nan
 
 # =============================================================================
 # get_type_and_shape 
 # =============================================================================
 
-def get_type_and_shape(item): return type(item), get_shape(item=item)
+def get_type_and_shape(x): return type(x), get_shape(x=x)
 
 # =============================================================================
 # print_sequence
