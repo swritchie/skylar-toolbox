@@ -30,6 +30,26 @@ class DocFilter:
         else: print(self.doc_ss.iloc[slice(*self.sections_df.loc[section_sr, :])].str.cat(sep='\n'))
 
 # =============================================================================
+# describe_structure
+# =============================================================================
+
+def describe_structure(x, indent_it=0):
+    prefix_sr = "  " * indent_it
+    if isinstance(x, dict):
+        print(f"{prefix_sr}dict with {len(x)} keys")
+        for key, value in x.items():
+            print(f"{prefix_sr}- key: {repr(key)}")
+            describe_structure(x=value, indent_it=indent_it + 1)
+    elif isinstance(x, list):
+        print(f"{prefix_sr}list with {len(x)} items")
+        for i_it, item in enumerate(iterable=x):
+            print(f"{prefix_sr}- index {i_it}")
+            describe_structure(x=item, indent_it=indent_it + 1)
+    else:
+        if isinstance(x, str) and len(x) > 8e1: print(f"{prefix_sr}{x.__class__.__name__}: (str of length {len(x)})")
+        else: print(f"{prefix_sr}{x.__class__.__name__}: {repr(x)}")
+
+# =============================================================================
 # filter_dir
 # =============================================================================
 
