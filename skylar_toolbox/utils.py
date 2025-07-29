@@ -42,12 +42,12 @@ def describe_structure(x, indent_it=0, max_indent_it=2):
         print(f'{prefix_sr}{type(x)} with {len(x)} keys')
         for key, value in x.items():
             print(f'{prefix_sr}- key: {key}')
-            describe_structure(x=value, indent_it=indent_it + 1)
+            describe_structure(x=value, indent_it=indent_it + 1, max_indent_it=max_indent_it)
     elif isinstance(x, (list, set, tuple)):
         print(f'{prefix_sr}{type(x)} with {len(x)} elements')
         for i_it, element in enumerate(iterable=x):
             print(f'{prefix_sr}- element: {i_it}')
-            describe_structure(x=element, indent_it=indent_it + 1)
+            describe_structure(x=element, indent_it=indent_it + 1, max_indent_it=max_indent_it)
     else: print(f'{prefix_sr}{get_type_and_shape(x=x)}')
 
 # =============================================================================
