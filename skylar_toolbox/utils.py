@@ -33,21 +33,22 @@ class DocFilter:
 # describe_structure
 # =============================================================================
 
-def describe_structure(x, indent_it=0):
-    prefix_sr = "  " * indent_it
+def describe_structure(x, indent_it=0, max_indent_it=2):
+    prefix_sr = '  ' * indent_it
+    if indent_it > max_indent_it:
+        print(f'{prefix_sr}(Depth limit reached)')
+        return
     if isinstance(x, dict):
-        print(f"{prefix_sr}dict with {len(x)} keys")
+        print(f'{prefix_sr}{type(x)} with {len(x)} keys')
         for key, value in x.items():
-            print(f"{prefix_sr}- key: {repr(key)}")
+            print(f'{prefix_sr}- key: {key}')
             describe_structure(x=value, indent_it=indent_it + 1)
-    elif isinstance(x, list):
-        print(f"{prefix_sr}list with {len(x)} items")
-        for i_it, item in enumerate(iterable=x):
-            print(f"{prefix_sr}- index {i_it}")
-            describe_structure(x=item, indent_it=indent_it + 1)
-    else:
-        if isinstance(x, str) and len(x) > 8e1: print(f"{prefix_sr}{x.__class__.__name__}: (str of length {len(x)})")
-        else: print(f"{prefix_sr}{x.__class__.__name__}: {repr(x)}")
+    elif isinstance(x, (list, set, tuple)):
+        print(f'{prefix_sr}{type(x)} with {len(x)} elements')
+        for i_it, element in enumerate(iterable=x):
+            print(f'{prefix_sr}- element: {i_it}')
+            describe_structure(x=element, indent_it=indent_it + 1)
+    else: print(f'{prefix_sr}{get_type_and_shape(x=x)}')
 
 # =============================================================================
 # filter_dir
