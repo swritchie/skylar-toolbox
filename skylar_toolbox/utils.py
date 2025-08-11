@@ -81,6 +81,18 @@ def get_shape(x):
 def get_type_and_shape(x): return type(x), get_shape(x=x)
 
 # =============================================================================
+# print_doc
+# =============================================================================
+
+def print_doc(x, sections_lt=['Intro']):
+    df = DocFilter(x=x).fit()
+    print(df.sections_df.index.tolist())
+    for section_sr in sections_lt:
+        try: df.print(section_sr=section_sr)
+        except: pass
+    return df
+
+# =============================================================================
 # print_sequence
 # =============================================================================
 
