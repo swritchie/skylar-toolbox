@@ -232,6 +232,15 @@ def get_cross_entropy(y_trues, y_pred_probas):
     return -(y_trues * y_pred_probas.clip(lower=eps_ft, upper=1 - eps_ft).apply(func=np.log)).sum(axis=1)
 
 # =============================================================================
+# get_eval_metrics
+# =============================================================================
+
+def get_eval_metrics(eval_metrics_df): return (eval_metrics_df
+    .iloc[:, :2]
+    .stack()
+    .pipe(func=lambda x: x.set_axis(labels=x.index.to_series().apply(func='_'.join))))
+
+# =============================================================================
 # set_titles
 # =============================================================================
 
