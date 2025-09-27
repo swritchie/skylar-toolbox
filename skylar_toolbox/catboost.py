@@ -50,11 +50,13 @@ class CatBoostInspector:
         feature_importances_df.sort_values(by='LossFunctionChange', ascending=False, inplace=True)
         self.feature_importances_df = feature_importances_df
         # Get interactions
-        features_dt = {index_it: feature_sr for index_it, feature_sr in enumerate(iterable=features_lt)}
-        interactions_df = pd.DataFrame(
-            data=self.cbm.get_feature_importance(data=pl, type='Interaction'),
-            columns=['first_feature', 'second_feature', 'interactions'])
-        self.interactions_df = interactions_df.apply(func=lambda x: x.map(arg=features_dt) if x.name != 'interactions' else x)
+        try:
+            features_dt = {index_it: feature_sr for index_it, feature_sr in enumerate(iterable=features_lt)}
+            interactions_df = pd.DataFrame(
+                data=self.cbm.get_feature_importance(data=pl, type='Interaction'),
+                columns=['first_feature', 'second_feature', 'interactions'])
+            self.interactions_df = interactions_df.apply(func=lambda x: x.map(arg=features_dt) if x.name != 'interactions' else x)
+        except Exception as en: print(en.__class__, en)
         return self
     def plot_eval_metrics(self, last_bl=False):
         if last_bl:
