@@ -13,4 +13,4 @@ setuptools.setup(
         'optuna': ['optuna'],
         'lifelines': ['lifelines'],
         'scikit-survival': ['scikit-survival'],
-        'complete': ['catboost', 'lifelines', 'networkx', 'optuna']})
+        'complete': ['catboost', 'lifelines', 'networkx', 'optuna', 'scikit-survival']})
