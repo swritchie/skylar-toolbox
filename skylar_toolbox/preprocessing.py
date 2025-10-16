@@ -106,8 +106,10 @@ class TypeCaster(snbe.BaseEstimator, snbe.TransformerMixin):
 # =============================================================================
 
 class TypeConverter(snbe.BaseEstimator, snbe.TransformerMixin):
-    def fit(self, X, y=None): return self
-    def transform(self, X): return X.convert_dtypes()
+    def fit(self, X, y=None): 
+        self.dtypes_ss = X.convert_dtypes().dtypes
+        return self
+    def transform(self, X): return X.astype(dtype=self.dtypes_ss)
     def get_feature_names_out(): pass
 
 # =============================================================================
