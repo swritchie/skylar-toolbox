@@ -123,3 +123,14 @@ class TypeDowncaster(snbe.BaseEstimator, snbe.TransformerMixin):
         .apply(func=pd.to_numeric, errors='ignore', downcast='integer')
         .apply(func=pd.to_numeric, errors='ignore', downcast='float')], axis=1))
     def get_feature_names_out(): pass
+
+# =============================================================================
+# downcast_types
+# =============================================================================
+
+def downcast_types(df): return df.pipe(func=lambda x: pd.concat(objs=[
+    x.select_dtypes(exclude='number')
+    .apply(func=pd.to_datetime, errors='ignore'),
+    x.select_dtypes(include='number')
+    .apply(func=pd.to_numeric, errors='ignore', downcast='integer')
+    .apply(func=pd.to_numeric, errors='ignore', downcast='float')], axis=1))
