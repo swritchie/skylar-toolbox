@@ -115,13 +115,10 @@ class TypeConverter(snbe.BaseEstimator, snbe.TransformerMixin):
 # =============================================================================
 
 class TypeDowncaster(snbe.BaseEstimator, snbe.TransformerMixin):
-    def fit(self, X, y=None): return self
-    def transform(self, X): return X.pipe(func=lambda x: pd.concat(objs=[
-        x.select_dtypes(exclude='number')
-        .apply(func=pd.to_datetime, errors='ignore'),
-        x.select_dtypes(include='number')
-        .apply(func=pd.to_numeric, errors='ignore', downcast='integer')
-        .apply(func=pd.to_numeric, errors='ignore', downcast='float')], axis=1))
+    def fit(self, X, y=None): 
+        self.dtypes_ss = X.pipe(func=downcast_types).dtypes
+        return self
+    def transform(self, X): return X.astype(dtype=self.dtypes_ss)
     def get_feature_names_out(): pass
 
 # =============================================================================
