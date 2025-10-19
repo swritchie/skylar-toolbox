@@ -180,12 +180,17 @@ def get_evals_result(cbm): return pd.DataFrame(data=cbm.evals_result_).stack().a
 # get_selected_features
 # =============================================================================
 
-def get_selected_features(select_features_dt):
+def get_selected_features(select_features_dt, eliminate_some_bl=False):
+    # Get eliminated and selected features
     eliminated_features_ss = pd.Series(
         data=select_features_dt['loss_graph']['loss_values'][1:], index=select_features_dt['eliminated_features_names'])
     eliminated_features_ix = eliminated_features_ss.index
     selected_features_ix = pd.Index(data=select_features_dt['selected_features_names'])
+    # Get lowest loss value (or next lowest if this is first and eliminate_some_bl=True)
     min_loss_ft = eliminated_features_ss.min()
+    if min_loss_ft == eliminated_features_ss.iloc[0] and eliminate_some_bl:
+        min_loss_ft = eliminated_features_ss.drop_duplicates().iloc[1]
+    # Get optimal eliminated and selected features (i.e., those whose losses are greater than minimum)
     optimal_eliminated_features_ss = eliminated_features_ss.pipe(func=lambda x: x[:x.tolist().index(min_loss_ft)])
     optimal_eliminated_features_ix = optimal_eliminated_features_ss.index
     optimal_selected_features_ix = (
@@ -197,7 +202,6 @@ def get_selected_features(select_features_dt):
         eliminated_features_ix=eliminated_features_ix, selected_features_ix=selected_features_ix,
         min_loss_ft=min_loss_ft, optimal_eliminated_features_ss=optimal_eliminated_features_ss,
         optimal_eliminated_features_ix=optimal_eliminated_features_ix, optimal_selected_features_ix=optimal_selected_features_ix)
-
     
 # =============================================================================
 # plot_evals_result
