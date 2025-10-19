@@ -222,6 +222,19 @@ def plot_evals_result(evals_result_df):
     return fig
 
 # =============================================================================
+# plot_selected_features
+# =============================================================================
+
+def plot_selected_features(selected_features_dt):
+    title_sr = 'Features selected by RFE (%d of %d)\nMin loss = %.3f' % (
+        selected_features_dt['optimal_selected_features_ix'].shape[0],
+        selected_features_dt['eliminated_features_ss'].shape[0] + 1,
+        selected_features_dt['min_loss_ft'])
+    ax = selected_features_dt['eliminated_features_ss'].plot(title=title_sr)
+    selected_features_dt['optimal_eliminated_features_ss'].plot(c='lightgrey', ax=ax)
+    return ax
+
+# =============================================================================
 # update_params
 # =============================================================================
 
