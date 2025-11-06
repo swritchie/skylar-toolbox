@@ -14,15 +14,14 @@ from skylar_toolbox import feature_selection as stfs
 # =============================================================================
 
 class CorrelatedDropper(snbe.BaseEstimator, snbe.TransformerMixin):
-    def __init__(self, method_sr='spearman', sample_dt=dict(frac=1e0, random_state=0), threshold_ft=1e0):
-        self.method_sr, self.sample_dt, self.threshold_ft = method_sr, sample_dt, threshold_ft
+    def __init__(self, sample_dt=dict(frac=1e0, random_state=0), threshold_ft=1e0):
+        self.sample_dt, self.threshold_ft = sample_dt, threshold_ft
     def fit(self, X, y):
         # Get correlations between features
-        shared_dt = dict(method_sr=self.method_sr)
-        self.correlations_between_features_ss = steda.get_correlations(X.sample(**self.sample_dt), **shared_dt)
+        self.correlations_between_features_ss = steda.get_correlations(X.sample(**self.sample_dt))
         self.correlated_feature_groups_df = get_correlated_groups(correlations_ss=self.correlations_between_features_ss)
         # Get correlations with target
-        self.correlations_with_target_ss = steda.get_correlations(X.sample(**self.sample_dt), y.sample(**self.sample_dt), **shared_dt)
+        self.correlations_with_target_ss = steda.get_correlations(X.sample(**self.sample_dt), y.sample(**self.sample_dt))
         # Get features to drop (high correlation with each other, low correlation with target)
         try: self.drop_lt = stfs.get_correlated_features_to_drop(
             correlated_groups_lt=self.correlated_feature_groups_df.loc[self.threshold_ft, 'groups'], 
