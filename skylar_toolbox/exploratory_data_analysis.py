@@ -26,12 +26,13 @@ def describe(df): return pd.concat(objs=[
 # get_correlations
 # =============================================================================
 
-def get_correlations(*data_te, method_sr='spearman'):
+def get_correlations(*data_te):
+    method_sr = 'spearman'
     if len(data_te) == 1:
         df, correlations_dt = data_te[0], {}
         for columns_te in tqdm.tqdm(iterable=sorted(itertools.combinations(iterable=df, r=2))):
             correlations_dt[columns_te] = df[list(columns_te)].corr(method=method_sr).iloc[0, 1]
-        return pd.Series(data=correlations_dt, name=method_sr).sort_values()
+        return pd.Series(data=correlations_dt).sort_values()
     else:
         df, other_ss = data_te
         return df.corrwith(other=other_ss, method=method_sr).sort_values()
