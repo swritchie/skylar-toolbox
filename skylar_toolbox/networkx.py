@@ -5,7 +5,6 @@
 import networkx as nx
 import numpy as np
 import pandas as pd
-import toolz as tz
 from sklearn import base as snbe
 from skylar_toolbox import exploratory_data_analysis as steda
 from skylar_toolbox import feature_selection as stfs
@@ -19,11 +18,11 @@ class CorrelatedDropper(snbe.BaseEstimator, snbe.TransformerMixin):
         self.method_sr, self.sample_dt, self.threshold_ft = method_sr, sample_dt, threshold_ft
     def fit(self, X, y):
         # Get correlations between features
-        partial_get_correlations = tz.partial(steda.get_correlations, method_sr=self.method_sr)
-        self.correlations_between_features_ss = partial_get_correlations(X.sample(**self.sample_dt))
+        shared_dt = dict(method_sr=self.method_sr)
+        self.correlations_between_features_ss = steda.get_correlations(X.sample(**self.sample_dt), **shared_dt)
         self.correlated_feature_groups_df = get_correlated_groups(correlations_ss=self.correlations_between_features_ss)
         # Get correlations with target
-        self.correlations_with_target_ss = partial_get_correlations(X.sample(**self.sample_dt), y.sample(**self.sample_dt))
+        self.correlations_with_target_ss = steda.get_correlations(X.sample(**self.sample_dt), y.sample(**self.sample_dt), **shared_dt)
         # Get features to drop (high correlation with each other, low correlation with target)
         try: self.drop_lt = stfs.get_correlated_features_to_drop(
             correlated_groups_lt=self.correlated_feature_groups_df.loc[self.threshold_ft, 'groups'], 
