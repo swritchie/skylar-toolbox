@@ -30,4 +30,5 @@ def get_correlated_groups(correlations_ss, thresholds_ay=np.arange(start=1e-2, s
             'min_group_sizes': lambda x: x['group_sizes'].apply(func=min),
             'max_group_sizes': lambda x: x['group_sizes'].apply(func=max),
             'total_group_sizes': lambda x: x['group_sizes'].apply(func=sum),
-            'n_features_dropped': lambda x: x['total_group_sizes'].sub(other=x['n_groups'])}))
+            'n_features_dropped': lambda x: x['total_group_sizes'].sub(other=x['n_groups'])})
+        .pipe(func=lambda x: x.set_axis(labels=pd.IntervalIndex.from_breaks(breaks=x.index.tolist() + [1], closed='left'))))
