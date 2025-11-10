@@ -34,3 +34,14 @@ def get_predictions(random_forest, X, classification_bl):
     return (pd.concat(objs=map(fn, random_forest.estimators_), axis=1)
         .rename(columns=lambda x: x + 1)
         .pipe(func=lambda x: x.astype(dtype=int) if classification_bl else x))
+
+# =============================================================================
+# plot_cumulative_predictions 
+# =============================================================================
+
+def plot_cumulative_scores(cumulative_scores_df):
+    fewest_best_dt = cumulative_scores_df['cummax'].pipe(func=lambda x: x[x.eq(other=x.max())]).iloc[[0]].to_dict()
+    title_sr = tz.pipe(fewest_best_dt.items(), tz.curried.map(lambda x: 'Estimators: %d\nScores: %.3f' % x), '\n'.join)
+    ax = cumulative_scores_df.plot(drawstyle='steps-mid', title=title_sr)
+    ax.axvline(x=next(iter(fewest_best_dt)), c='k', ls=':')
+    return ax
