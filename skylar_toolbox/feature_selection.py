@@ -4,6 +4,7 @@
 
 import itertools
 import pandas as pd
+import toolz as tz
 import tqdm
 from sklearn import base as snbe
 from skylar_toolbox import utils as stus
@@ -51,3 +52,40 @@ def get_correlated_features_to_drop(correlated_groups_lt, scores_ss, lower_is_be
         drop_lt.extend(list(rest_st))
         if print_bl: stus.print_shapes(x=[correlated_group_st, rest_st, drop_lt], sep=' -> ')
     return drop_lt
+
+# =============================================================================
+# get_scores
+# =============================================================================
+
+def get_scores(rfecv): return tz.pipe(
+    rfecv.cv_results_, 
+    tz.curried.keyfilter(lambda x: x.endswith('score') or x == 'n_features'), 
+    pd.DataFrame).set_index(keys='n_features')
+
+# =============================================================================
+# get_support
+# =============================================================================
+
+def get_support(rfecv):
+    def _get_split_support(support_key_sr): return (
+        pd.DataFrame(data=rfecv.cv_results_[support_key_sr], index=rfecv.cv_results_['n_features'])
+        .apply(func=np.array, axis=1)
+        .apply(func=lambda x: rfecv.feature_names_in_[x]))
+    support_keys_lt = tz.pipe(rfecv.cv_results_, tz.curried.keyfilter(lambda x: x.endswith('support')), list)
+    return pd.concat(objs=map(_get_split_support, support_keys_lt), axis=1).assign(**{
+        'frequencies': lambda x: x.apply(func=lambda x: tz.pipe(x, tz.concat, tz.frequencies), axis=1),
+        'intersection': lambda x: x['frequencies'].apply(func=lambda y: list(tz.valfilter(predicate=lambda z: z == x.shape[1] - 1, d=y))),
+        'intersection_percentage': lambda x: x['intersection'].apply(func=len).div(other=x.index)})
+
+# =============================================================================
+# plot_scores
+# =============================================================================
+
+def plot_scores(scores_df):
+    n_features_it = scores_df['mean_test_score'].idxmax()
+    title_sr = tz.pipe(scores_df.loc[n_features_it, ['mean_test_score', 'std_test_score']].to_dict().items(), 
+        tz.curried.map(lambda x: '%s = %.3f' % x),
+        '\n'.join)
+    ax = scores_df.plot(y='mean_test_score', yerr='std_test_score', title=title_sr)
+    ax.axvline(x=n_features_it, c='k', ls=':')
+    return ax
