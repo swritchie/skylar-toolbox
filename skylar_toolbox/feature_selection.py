@@ -83,9 +83,8 @@ def get_support(rfecv):
 
 def plot_scores(scores_df):
     n_features_it = scores_df['mean_test_score'].idxmax()
-    title_sr = tz.pipe(scores_df.loc[n_features_it, ['mean_test_score', 'std_test_score']].to_dict().items(), 
-        tz.curried.map(lambda x: '%s = %.3f' % x),
-        '\n'.join)
-    ax = scores_df.plot(y='mean_test_score', yerr='std_test_score', title=title_sr)
+    best_dt = scores_df.loc[[n_features_it], 'mean_test_score'].to_dict()
+    title_sr = tz.pipe(best_dt.items(), tz.curried.map(lambda x: 'Features: %d\nScores: %.3f' % x), '\n'.join)
+    ax = scores_df.plot(y='mean_test_score', yerr='std_test_score', legend=False, title=title_sr)
     ax.axvline(x=n_features_it, c='k', ls=':')
     return ax
