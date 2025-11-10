@@ -20,7 +20,10 @@ def get_cumulative_predictions(predictions_df, classification_bl):
 
 def get_cumulative_scores(cumulative_predictions_df, y, classification_bl):
     fn = lambda x: snmes.balanced_accuracy_score(y_true=y, y_pred=x) if classification_bl else snmes.r2_score(y_true=y, y_pred=x)
-    return cumulative_predictions_df.apply(func=fn)
+    return (cumulative_predictions_df
+        .apply(func=fn)
+        .to_frame(name='scores')
+        .assign(**{'cummax': lambda x: x['scores'].cummax()}))
 
 # =============================================================================
 # get_predictions
