@@ -58,10 +58,16 @@ def get_correlated_features_to_drop(correlated_groups_lt, scores_ss, lower_is_be
 # get_scores
 # =============================================================================
 
-def get_scores(rfecv): return tz.pipe(
-    rfecv.cv_results_, 
-    tz.curried.keyfilter(lambda x: x.endswith('score') or x == 'n_features'), 
-    pd.DataFrame).set_index(keys='n_features')
+def get_scores(rfecv): return (
+    tz.pipe(rfecv.cv_results_, tz.curried.keyfilter(lambda x: x.endswith('score') or x == 'n_features'), pd.DataFrame)
+    .set_index(keys='n_features')
+    .assign(**{
+        'sem_test_score': lambda x: x.filter(regex=r'split\d').sem(axis=1),
+        'best': lambda x: x['mean_test_score'].pipe(func=lambda x: x.eq(other=x.max())),
+        'best_mean': lambda x: x['mean_test_score'].where(cond=x['best']).bfill().ffill(),
+        'best_sem': lambda x: x['sem_test_score'].where(cond=x['best']).bfill().ffill(),
+        'best_lower': lambda x: x['best_mean'].sub(other=x['best_sem']),
+        'wi_1_sem': lambda x: x['mean_test_score'].gt(other=x['best_lower'])}))
 
 # =============================================================================
 # get_support
