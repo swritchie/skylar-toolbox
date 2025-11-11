@@ -5,7 +5,7 @@
 import pandas as pd
 import toolz as tz
 from matplotlib import pyplot as plt
-from sklearn import metrics as snmes
+from sklearn import model_selection as snmos 
 
 # =============================================================================
 # plot_warm_start_validation_curve 
