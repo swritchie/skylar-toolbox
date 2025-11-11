@@ -89,9 +89,16 @@ def get_support(rfecv):
 # =============================================================================
 
 def plot_scores(scores_df):
-    n_features_it = scores_df['mean_test_score'].idxmax()
-    best_dt = scores_df.loc[[n_features_it], 'mean_test_score'].to_dict()
-    title_sr = tz.pipe(best_dt.items(), tz.curried.map(lambda x: 'Features: %d\nScores: %.3f' % x), '\n'.join)
-    ax = scores_df.plot(y='mean_test_score', yerr='std_test_score', legend=False, title=title_sr)
-    ax.axvline(x=n_features_it, c='k', ls=':')
+    # Get features/scores associated with best number of features (and number within 1 SEM)
+    best_dt = scores_df.query(expr='best')['mean_test_score'].to_dict()
+    wi_1_sem_dt = scores_df.query(expr='wi_1_sem')['mean_test_score'].iloc[[0]].to_dict()
+    # Get title
+    best_sr = tz.pipe(best_dt.items(), tz.curried.map(lambda x: 'Best: %d features / %.3f score' % x), next)
+    wi_1_sem_sr = tz.pipe(wi_1_sem_dt.items(), tz.curried.map(lambda x: 'W/i 1 SEM: %d features / %.3f score' % x), next)
+    title_sr = '\n'.join([best_sr, wi_1_sem_sr])
+    # Plot
+    fig, ax = plt.subplots()
+    list(map(lambda x: ax.axvline(x=next(iter(x)), c='k', ls=':'), [best_dt, wi_1_sem_dt]))
+    ax.axhline(y=scores_df['best_lower'].iloc[0], c='k', ls=':')
+    scores_df.plot(y='mean_test_score', yerr='sem_test_score', marker='.', legend=False, ylabel='Mean +- SEM', title=title_sr, ax=ax)
     return ax
