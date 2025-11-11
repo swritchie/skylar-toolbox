@@ -18,18 +18,19 @@ class CorrelatedDropper(snbe.BaseEstimator, snbe.TransformerMixin):
         self.sample_dt, self.threshold_ft = sample_dt, threshold_ft
     def fit(self, X, y):
         # Get correlations between features
-        self.correlations_between_features_ss = steda.get_correlations(X.sample(**self.sample_dt))
+        self.correlations_between_features_ss = steda.get_correlations(X=X.sample(**self.sample_dt))
         self.correlated_feature_groups_df = get_correlated_groups(correlations_ss=self.correlations_between_features_ss)
         # Get correlations with target
-        self.correlations_with_target_ss = steda.get_correlations(X.sample(**self.sample_dt), y.sample(**self.sample_dt))
+        self.correlations_with_target_ss = steda.get_correlations(X=X.sample(**self.sample_dt), y=y.sample(**self.sample_dt))
+        return self
+    def transform(self, X): 
         # Get features to drop (high correlation with each other, low correlation with target)
         try: self.drop_lt = stfs.get_correlated_features_to_drop(
             correlated_groups_lt=self.correlated_feature_groups_df.loc[self.threshold_ft, 'groups'], 
             scores_ss=self.correlations_with_target_ss.abs(), 
             lower_is_better_bl=False)
         except: self.drop_lt = []
-        return self
-    def transform(self, X): return X.drop(columns=self.drop_lt)
+        return X.drop(columns=self.drop_lt)
     def get_feature_names_out(): pass
 
 # =============================================================================
