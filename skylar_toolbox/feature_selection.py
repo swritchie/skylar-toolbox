@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import toolz as tz
 import tqdm
+from matplotlib import pyplot as plt
 from sklearn import base as snbe
 from skylar_toolbox import utils as stus
 
