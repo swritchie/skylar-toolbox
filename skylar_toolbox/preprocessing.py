@@ -22,13 +22,13 @@ class Replacer(snbe.BaseEstimator, snbe.TransformerMixin):
 # =============================================================================
 
 class TypeCaster(snbe.BaseEstimator, snbe.TransformerMixin):
-    def __init__(self, type_sr, features_lt=None): self.type_sr, self.features_lt = type_sr, features_lt
+    def __init__(self, dtype, features_lt=None): self.dtype, self.features_lt = dtype, features_lt
     def fit(self, X, y=None):
         self.old_dtypes_dt = X.dtypes.to_dict()
         if self.features_lt: self.new_dtypes_dt = {
-            feature_sr: self.type_sr if feature_sr in self.features_lt else dtype
+            feature_sr: self.dtype if feature_sr in self.features_lt else dtype
             for feature_sr, dtype in self.old_dtypes_dt.items()}
-        else: self.new_dtypes_dt = {feature_sr: self.type_sr for feature_sr in X.columns}
+        else: self.new_dtypes_dt = {feature_sr: self.dtype for feature_sr in X.columns}
         return self
     def transform(self, X): return X.astype(dtype=self.new_dtypes_dt)
     def get_feature_names_out(): pass
