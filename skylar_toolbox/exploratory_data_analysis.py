@@ -68,6 +68,20 @@ def plot_largest_barh(ss, n_it=int(1e1), signed_bl=True, bbox_lt=[1.25, 0, 2.5e-
     return ax
 
 # =============================================================================
+# plot_parallel_coordinates
+# =============================================================================
+
+def plot_parallel_coordinates(X, y, **kwargs): 
+    return pd.plotting.parallel_coordinates(frame=X.join(other=y), class_column=y.name, **kwargs)
+
+# =============================================================================
+# plot_radviz
+# =============================================================================
+
+def plot_radviz(X, y, **kwargs): 
+    return pd.plotting.radviz(frame=X.join(other=y), class_column=y.name, **kwargs)
+
+# =============================================================================
 # plot_time_series
 # =============================================================================
 
